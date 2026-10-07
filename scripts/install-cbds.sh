@@ -26,10 +26,20 @@ else
 fi
 
 echo 'Installing cbds CLI...'
-npm install -g "$DEST"
+if [ -w "$(npm root -g 2>/dev/null || echo /usr/lib/node_modules)" ]; then
+  npm install -g "$DEST"
+else
+  PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+  mkdir -p "$PREFIX"
+  npm install -g --prefix "$PREFIX" "$DEST"
+fi
 
 echo 'Installing cbds worker skill...'
 cbds skill install
+if [ -d "$HOME/.agents/skills" ]; then
+  mkdir -p "$HOME/.agents/skills"
+  ln -sfn "${HOME}/.gemini/skills/cbds" "$HOME/.agents/skills/cbds" 2>/dev/null || true
+fi
 
 if command -v herdr >/dev/null 2>&1; then
   echo 'Linking cbds as a Herdr plugin...'
