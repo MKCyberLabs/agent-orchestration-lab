@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Result",
+  "type": "object",
+  "required": ["task_id", "outcome", "subject", "body", "files_modified", "verification"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "outcome": {"enum": ["succeeded", "failed", "blocked"]},
+    "subject": {"type": "string"},
+    "body": {"type": "string"},
+    "files_modified": {"type": "array", "items": {"type": "string"}},
+    "verification": {"type": "array", "items": {"type": "string"}},
+    "branch": {"type": ["string", "null"]},
+    "commit": {"type": ["string", "null"]},
+    "question": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}
