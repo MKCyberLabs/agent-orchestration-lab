@@ -1,0 +1,22 @@
+name: V0.2 Orchestrator Contract Tests
+on:
+  push:
+    branches:
+      - feature/v0.2-codex-reviewer-recovery
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'tests/test_v02_shell.sh'
+      - '.github/workflows/v02-contract-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  shell-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reviewer and cbds transport contract (mocked; no model API)
+        run: bash tests/test_v02_shell.sh
