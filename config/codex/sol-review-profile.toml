@@ -1,8 +1,0 @@
-# TEMPLATE ONLY. Install using scripts/install-sol-review-profile.sh.
-# This belongs in ~/.codex/config.toml, never under project-local .codex/config.toml.
-[profiles.sol-review]
-model = "gpt-6.1-sol"
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"
-approval_policy = "never"
-web_search = "disabled"
