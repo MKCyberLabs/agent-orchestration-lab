@@ -73,6 +73,28 @@ grep -q -- '--outcome succeeded' "$CBDS_TEST_LOG"
 grep -q 'VERDICT=PASS' "$CBDS_TEST_LOG"
 echo "PASS: accepted PASS report"
 
+# Regression: ticket-mode validation MUST run for standalone reviewer calls.
+# A model message containing VERDICT: PASS but no JSON is BLOCKED (not success).
+set +e
+SOL_REVIEW_TICKET_MODE=1 MOCK_CODEX_VERDICT=PASS \
+  bash "$root/scripts/run-sol-review.sh" "$tmp/repo" main > "$tmp/ticket-missing.log" 2>&1
+status=$?
+set -e
+[[ "$status" -eq 28 ]] || { echo "FAIL: ticket-mode missing JSON returned exit=$status, expected 28"; exit 1; }
+grep -q "VERDICT: BLOCKED" "$tmp/ticket-missing.log"
+echo "PASS: standalone ticket-mode rejects unvalidated PASS report"
+
+# With cbds-managed context, invalid packet is an authoritative BLOCKED transport.
+: > "$CBDS_TEST_LOG"
+set +e
+SOL_REVIEW_TICKET_MODE=1 CBDS_TASK_ID=tsk_test CBDS_DISPATCH_ID=dsp_test MOCK_CODEX_VERDICT=FAIL \
+  bash "$root/scripts/run-sol-review.sh" "$tmp/repo" main > "$tmp/ticket-cbds-invalid.log" 2>&1
+status=$?
+set -e
+[[ "$status" -eq 28 ]] || { echo "FAIL: cbds ticket-mode invalid packet returned exit=$status"; exit 1; }
+grep -q -- "--outcome blocked" "$CBDS_TEST_LOG"
+echo "PASS: cbds ticket-mode invalid packet reports BLOCKED once"
+
 : > "$CBDS_TEST_LOG"
 set +e
 CBDS_TASK_ID=tsk_test CBDS_DISPATCH_ID=dsp_test MOCK_CODEX_VERDICT=FAIL \
