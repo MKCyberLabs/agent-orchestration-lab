@@ -33,6 +33,11 @@ finish() {
     finish BLOCKED "Invalid or missing ticket JSON; HEAD=$sha; report=$result; validator=$work/ticket-validation.log"
     exit 28
   fi
+  if ! python3 "$script_dir/render-sol-tickets.py" --packet "$work/tickets.json" --out-dir "$work/ticket-issues" \
+    > "$work/ticket-render.log" 2>&1; then
+    finish BLOCKED "Ticket rendering failed; HEAD=$sha; details=$work/ticket-render.log"
+    exit 30
+  fi
 fi
 if [[ "$verdict" == BLOCKED ]]; then
       cbds done --outcome blocked --subject "Sol review blocked" \
