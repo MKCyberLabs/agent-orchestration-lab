@@ -26,6 +26,7 @@ class StateMachineTests(unittest.TestCase):
         self.call_git("config", "user.email", "lab@example.test")
         self.call_git("config", "user.name", "Lab Tests")
         self.call_git("branch", "-M", "orchestration/finance-crud-reminders-r001")
+        (self.repo / ".gitignore").write_text(".cbds/\n")
         (self.repo / "finance.ts").write_text("export const value = 1;\n")
         self.commit("initial commit")
         self.evidence = self.root / "tests.txt"
