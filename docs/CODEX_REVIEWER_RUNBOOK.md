@@ -12,7 +12,7 @@ cat /etc/os-release
 command -v codex; codex --version
 command -v bwrap || true
 sysctl kernel.unprivileged_userns_clone kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true
-codex sandbox linux /bin/true
+codex sandbox -- /bin/true
 ```
 
 On Ubuntu/Debian, first install the distribution package if absent:
