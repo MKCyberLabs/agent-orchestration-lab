@@ -20,8 +20,8 @@ fi
 if command -v sysctl >/dev/null 2>&1; then
   sysctl kernel.unprivileged_userns_clone kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || true
 fi
-echo "Testing Linux sandbox, no model call: codex sandbox linux /bin/true"
-if ! timeout 45s codex sandbox linux /bin/true; then
+echo "Testing Linux sandbox, no model call: codex sandbox -- /bin/true"
+if ! timeout 45s codex sandbox -- /bin/true; then
   echo "BLOCKED: Codex Linux sandbox could not run /bin/true. Inspect AppArmor/userns policy; do not disable security globally." >&2
   exit 12
 fi
