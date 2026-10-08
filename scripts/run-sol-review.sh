@@ -26,7 +26,15 @@ finish() {
   echo "VERDICT: $verdict"
   echo "$details"
   if [[ "$cbds_context" == 1 ]]; then
-    if [[ "$verdict" == BLOCKED ]]; then
+    if [[ "${SOL_REVIEW_TICKET_MODE:-0}" == "1" ]]; then
+  if ! python3 "$script_dir/validate-sol-tickets.py" \
+    --report "$result" --sha "$sha" --repo "$repo" --export "$work/tickets.json" \
+    > "$work/ticket-validation.log" 2>&1; then
+    finish BLOCKED "Invalid or missing ticket JSON; HEAD=$sha; report=$result; validator=$work/ticket-validation.log"
+    exit 28
+  fi
+fi
+if [[ "$verdict" == BLOCKED ]]; then
       cbds done --outcome blocked --subject "Sol review blocked" \
         --question "Resolve reviewer environment or specification blocker before review approval" \
         --body "$details"
@@ -86,12 +94,25 @@ Then include:
 Do not claim PASS if you could not read Git files.
 EOF
 
+if [[ "${SOL_REVIEW_TICKET_MODE:-0}" == "1" ]]; then
+  cat "$script_dir/../prompts/SOL_TICKET_REVIEW_APPENDIX.md" >> "$prompt"
+  if [[ -n "${SOL_REVIEW_PRIOR_TICKETS_FILE:-}" ]]; then
+    if [[ ! -s "$SOL_REVIEW_PRIOR_TICKETS_FILE" ]]; then
+      finish BLOCKED "Prior tickets file unavailable: $SOL_REVIEW_PRIOR_TICKETS_FILE"
+      exit 29
+    fi
+    printf "\nPRIOR FINDINGS (review original history and verify each; truncated evidence):\n" >> "$prompt"
+    head -c 20000 "$SOL_REVIEW_PRIOR_TICKETS_FILE" >> "$prompt"
+    printf "\n" >> "$prompt"
+  fi
+fi
+
 echo "Review target $sha (base $base)"
 echo "Evidence directory: $work"
 set +e
 (
   cd "$repo" &&
-  codex --profile sol-review exec \
+  timeout --signal=TERM --kill-after=15s "${SOL_REVIEW_TIMEOUT_SEC:-1800}s" codex --profile sol-review exec \
     --model gpt-6.1-sol \
     --sandbox read-only \
     --output-last-message "$result" \
