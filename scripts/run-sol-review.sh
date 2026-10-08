@@ -48,7 +48,7 @@ if ! git -C "$repo" rev-parse --verify "${base}^{commit}" >/dev/null 2>&1; then
   finish BLOCKED "Base ref $base unavailable in $repo. HEAD=$sha"
   exit 21
 fi
-if ! "$script_dir/preflight-codex-reviewer.sh"; then
+if ! bash "$script_dir/preflight-codex-reviewer.sh"; then
   finish BLOCKED "Sandbox preflight failed. HEAD=$sha. No model review started."
   exit 22
 fi
