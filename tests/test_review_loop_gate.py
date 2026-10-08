@@ -123,6 +123,18 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(stage["stage"], "max_rounds_reached")
         self.cli("review", "--report", str(with_prior_open), success=False)
 
+    def test_new_campaign_imports_prior_failure_without_burning_budget(self):
+        prior = self.call_git("rev-parse", "HEAD")
+        state = self.cli(
+            "init", "--max-rounds", "5", "--completed-rounds", "0",
+            "--last-reviewed-sha", prior, "--prior-result", "FAIL",
+            "--initial-ticket-ids", "R001-P1-01,R001-P1-02"
+        )
+        self.assertEqual(state["stage"], "repair_required")
+        self.assertEqual(state["review_count"], 0)
+        self.assertEqual(state["open_tickets"], ["R001-P1-01", "R001-P1-02"])
+        self.cli("review", "--report", str(self.report("FAIL", prior, "old.md")), success=False)
+
     def test_existing_history_uses_total_budget(self):
         sha = self.call_git("rev-parse", "HEAD")
         state = self.cli(
