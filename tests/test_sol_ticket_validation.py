@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -80,6 +81,25 @@ class TicketValidationTests(unittest.TestCase):
         d["findings"][0].pop("regression_tests")
         with self.assertRaises(module.InvalidPacket):
             module.validate(report(d), SHA, self.repo)
+
+    def test_ticket_renderer_creates_detailed_issue_markdown(self):
+        d = data("FAIL")
+        d["findings"] = [self.ticket()]
+        path = self.repo / "packet.json"
+        path.write_text(json.dumps(module.validate(report(d), SHA, self.repo)))
+        output = self.repo / "issues"
+        result = subprocess.run(
+            ["python3", str(Path(__file__).resolve().parent.parent / "scripts" / "render-sol-tickets.py"),
+             "--packet", str(path), "--out-dir", str(output)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rendered = (output / "SOL-R001-101.md").read_text()
+        self.assertIn("## Reproduction", rendered)
+        self.assertIn("## Acceptance criteria", rendered)
+        self.assertIn("## Required regression tests", rendered)
+        self.assertIn("Review SHA", rendered)
+        self.assertIn("Unresolved issue count: 1", (output / "INDEX.md").read_text())
 
     def test_pass_cannot_conceal_findings(self):
         d = data("PASS")
