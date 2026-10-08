@@ -55,18 +55,8 @@ chmod +x "$tmp/bin/"*
 export PATH="$tmp/bin:$PATH"
 export XDG_STATE_HOME="$tmp/state"
 
-# Profile installer is idempotent in the safe direction: second run halts.
-CODEX_HOME="$tmp/codex-home" bash "$root/scripts/install-sol-review-profile.sh" > /dev/null
-python3 - "$tmp/codex-home/config.toml" <<'PY'
-import tomllib, sys
-with open(sys.argv[1], "rb") as f:
-    cfg=tomllib.load(f)
-assert cfg["profiles"]["sol-review"]["sandbox_mode"] == "read-only"
-PY
-if CODEX_HOME="$tmp/codex-home" bash "$root/scripts/install-sol-review-profile.sh" >/dev/null 2>&1; then
-  echo "FAIL: duplicate profile was silently replaced"; exit 1
-fi
-echo "PASS: profile install and duplicate protection"
+python3 "$root/tests/test_profile_install.py"
+echo "PASS: current Codex profile install, migration and conflict protection"
 
 bash "$root/scripts/preflight-codex-reviewer.sh" >/dev/null
 echo "PASS: token-free preflight"
