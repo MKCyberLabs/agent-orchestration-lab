@@ -71,7 +71,7 @@ def execute(args):
             require(1 <= args.max_rounds <= 5, "Maximum must be between 1 and 5")
             require(0 <= args.completed_rounds <= args.max_rounds, "Invalid completed round count")
             head = check_repo(repo, args.branch)
-            if args.completed_rounds:
+            if args.completed_rounds or args.last_reviewed_sha:
                 require(bool(SHA.fullmatch(args.last_reviewed_sha or "")), "Prior review SHA required")
                 require(args.prior_result in ("FAIL", "PASS"), "Prior verdict required")
                 stage = "repair_required" if args.prior_result == "FAIL" else "review_pass_pending_gates"
