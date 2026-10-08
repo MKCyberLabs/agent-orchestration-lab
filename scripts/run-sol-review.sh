@@ -26,20 +26,7 @@ finish() {
   echo "VERDICT: $verdict"
   echo "$details"
   if [[ "$cbds_context" == 1 ]]; then
-    if [[ "${SOL_REVIEW_TICKET_MODE:-0}" == "1" ]]; then
-  if ! python3 "$script_dir/validate-sol-tickets.py" \
-    --report "$result" --sha "$sha" --repo "$repo" --export "$work/tickets.json" \
-    > "$work/ticket-validation.log" 2>&1; then
-    finish BLOCKED "Invalid or missing ticket JSON; HEAD=$sha; report=$result; validator=$work/ticket-validation.log"
-    exit 28
-  fi
-  if ! python3 "$script_dir/render-sol-tickets.py" --packet "$work/tickets.json" --out-dir "$work/ticket-issues" \
-    > "$work/ticket-render.log" 2>&1; then
-    finish BLOCKED "Ticket rendering failed; HEAD=$sha; details=$work/ticket-render.log"
-    exit 30
-  fi
-fi
-if [[ "$verdict" == BLOCKED ]]; then
+    if [[ "$verdict" == BLOCKED ]]; then
       cbds done --outcome blocked --subject "Sol review blocked" \
         --question "Resolve reviewer environment or specification blocker before review approval" \
         --body "$details"
@@ -144,6 +131,19 @@ if [[ "$(git -C "$repo" rev-parse HEAD)" != "$sha" ]]; then
   exit 26
 fi
 
+if [[ "${SOL_REVIEW_TICKET_MODE:-0}" == "1" ]]; then
+  if ! python3 "$script_dir/validate-sol-tickets.py" \
+    --report "$result" --sha "$sha" --repo "$repo" --export "$work/tickets.json" \
+    > "$work/ticket-validation.log" 2>&1; then
+    finish BLOCKED "Invalid or missing ticket JSON; HEAD=$sha; report=$result; validator=$work/ticket-validation.log"
+    exit 28
+  fi
+  if ! python3 "$script_dir/render-sol-tickets.py" --packet "$work/tickets.json" --out-dir "$work/ticket-issues" \
+    > "$work/ticket-render.log" 2>&1; then
+    finish BLOCKED "Ticket rendering failed; HEAD=$sha; details=$work/ticket-render.log"
+    exit 30
+  fi
+fi
 finish "$verdict" "Reviewed commit=$sha; base=$base; report=$result"
 echo "Evidence: $result"
 if [[ "$verdict" == FAIL ]]; then
