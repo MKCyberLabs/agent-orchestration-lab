@@ -60,7 +60,8 @@ echo "PASS: current Codex profile install, migration and conflict protection"
 
 python3 "$root/tests/test_sol_ticket_validation.py"
 python3 "$root/tests/test_review_loop_gate.py"
-echo "PASS: strict Sol ticket validation and 2–5-round review state machine"
+python3 "$root/tests/test_adaptive_repair.py"
+echo "PASS: strict Sol ticket validation, 2–5-round loop, and adaptive Codex/AGY routing"
 
 bash "$root/scripts/preflight-codex-reviewer.sh" >/dev/null
 echo "PASS: token-free preflight"
