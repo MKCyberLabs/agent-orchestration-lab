@@ -80,6 +80,9 @@ def plan(packet, state=None, threshold=4, force_multi=False):
         state_ids = state.get("open_tickets")
         require(isinstance(state_ids, list) and all(isinstance(s, str) for s in state_ids),
                 "invalid loop state open_tickets")
+        verified = {tid for tid, status in dispositions.items() if status == "VERIFIED_FIXED"}
+        require(not (set(state_ids) & verified),
+                "loop state still lists tickets already VERIFIED_FIXED by matching review")
         open_ids |= set(state_ids)
         maximum, used = state.get("max_rounds"), state.get("review_count")
         require(type(maximum) is int and type(used) is int and 1 <= maximum <= 5 and 0 <= used <= maximum,
@@ -91,8 +94,12 @@ def plan(packet, state=None, threshold=4, force_multi=False):
             "review_authorized_by_this_router": False,
         }
 
+    require(verdict != "PASS" or not open_ids, "matching review PASS conflicts with open loop state tickets")
     count = len(open_ids)
-    disputed = sorted(tid for tid, status in dispositions.items() if status == "DISPUTED")
+    disputed = sorted(
+        {tid for tid, status in dispositions.items() if status == "DISPUTED"} |
+        {tid for tid, ticket in tickets.items() if ticket["status"] == "DISPUTED"}
+    )
     p0 = sorted(tid for tid, ticket in tickets.items() if ticket["severity"] == "P0")
     if disputed or p0:
         route = "MANUAL_TRIAGE"
