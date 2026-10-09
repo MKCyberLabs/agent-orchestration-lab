@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Persistent hard gate for a bounded Herdr/cbds -> Sol review loop.
+"""Persistent hard gate for bounded Herdr/cbds OR Codex-direct -> Sol reviews.
 
 This intentionally DOES NOT dispatch agents or invoke a model: the orchestrator
-uses real installed cbds commands and feeds back accepted reports. It ensures
+supplies accepted cbds reports OR pinned Codex implementation evidence. It ensures
 a fresh code SHA, previous ticket continuity and a hard limit on review rounds.
 """
 import argparse
@@ -103,14 +103,46 @@ def execute(args):
                 changed = git(repo, "diff", "--name-only", prior_sha, head).splitlines()
                 require(any(s.endswith(CODE_SUFFIXES) and not s.endswith((".md", ".json")) for s in changed),
                         "New commit has no code changes; docs-only updates do not justify a new review")
-                require(args.cbds_report_ids, "Accepted cbds report IDs required")
+                cbds_ids = [x.strip() for x in args.cbds_report_ids.split(",") if x.strip()]
+                has_codex = bool(args.codex_implementation_evidence)
+                require(bool(cbds_ids) != has_codex,
+                        "Provide exactly one repair provenance: accepted cbds report IDs OR Codex implementation evidence")
+                if has_codex:
+                    impl_path = Path(args.codex_implementation_evidence).resolve()
+                    require(impl_path.is_file(), "Missing Codex implementation evidence JSON")
+                    impl = json.loads(impl_path.read_text(encoding="utf-8"))
+                    require(isinstance(impl, dict) and impl.get("route") == "CODEX_DIRECT",
+                            "Codex implementation evidence must declare CODEX_DIRECT")
+                    require(impl.get("implementation_sha") == head, "Codex implementation SHA differs from HEAD")
+                    require(impl.get("review_baseline_sha") == prior_sha,
+                            "Codex implementation baseline differs from previous reviewer SHA")
+                    require(impl.get("sandbox") == "workspace-write", "Codex edit must use workspace-write")
+                    require(isinstance(impl.get("model"), str) and bool(impl["model"].strip()),
+                            "Missing Codex implementation model")
+                    impl_tickets = impl.get("ticket_ids")
+                    require(isinstance(impl_tickets, list) and
+                            all(isinstance(x, str) and x for x in impl_tickets),
+                            "Missing Codex implementation ticket IDs")
+                    require(set(state["open_tickets"]) <= set(impl_tickets),
+                            "Codex evidence omits previously open ticket IDs")
+                    log_path = Path(impl.get("implementation_log", "")).resolve()
+                    require(log_path.is_file() and log_path.stat().st_size > 0,
+                            "Missing nonempty Codex implementation log")
+                    provenance = {
+                        "mode": "codex_direct", "codex_implementation_evidence": str(impl_path),
+                        "codex_log": str(log_path), "ticket_ids": impl_tickets,
+                        "model": impl["model"], "sandbox": impl["sandbox"],
+                    }
+                else:
+                    provenance = {"mode": "cbds_workers", "cbds_report_ids": cbds_ids}
                 evidence = Path(args.test_evidence).resolve()
                 require(evidence.is_file() and evidence.stat().st_size > 0, "Missing new test gate evidence")
                 state["last_integration_sha"] = head
                 state["stage"] = "review_ready"
                 state["history"].append({
                     "event": "integration_ready", "sha": head, "changed_files": changed,
-                    "cbds_report_ids": [x.strip() for x in args.cbds_report_ids.split(",") if x.strip()],
+                    "implementation": provenance,
+                    "cbds_report_ids": cbds_ids,
                     "test_evidence": str(evidence),
                 })
                 write_state(statefile, state)
@@ -166,6 +198,7 @@ def main():
     p.add_argument("--prior-result")
     p.add_argument("--initial-ticket-ids", default="")
     p.add_argument("--cbds-report-ids", default="")
+    p.add_argument("--codex-implementation-evidence", default="", help="Absolute path to Codex direct implementation JSON; mutually exclusive with cbds IDs")
     p.add_argument("--test-evidence", default="")
     p.add_argument("--report", default="")
     args = p.parse_args()
