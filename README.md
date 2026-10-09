@@ -15,6 +15,36 @@ The rule of this repo is simple:
 
 Workers do their work independently and explicitly report completion. The orchestrator wakes only for a durable result, blocker, timeout, or final integration gate.
 
+## V0.3 Adaptive Ticket Routing (current pilot)
+
+After every **validated independent Sol review**, run the offline
+\`scripts/route-repair.py\` selector. It chooses automatically:
+
+- **1–4 unresolved tickets:** one Codex GPT-6.1 Sol High implementer,
+  \`workspace-write\`, in an isolated repair worktree.
+- **5+ unresolved tickets:** up to two AGY workers with real Herdr/cbds
+  accepted completion reports and disjoint source file ownership.
+- **0 tickets:** no implementation required; evaluate independent release gates.
+- **P0 / disputed:** explicit triage before automatic editing.
+
+The read-only independent Codex review is ALWAYS separate from writable
+implementation; test/build and exact-SHA gates still apply. The router
+does not invoke models, bypass previous round caps, merge, or deploy.
+
+Quick command:
+
+\`\`\`bash
+python3 scripts/route-repair.py --tickets /absolute/path/to/validated/tickets.json \
+  --state /absolute/path/to/checkout/.cbds/review-loop-v02.json
+bash tests/test_v02_shell.sh
+\`\`\`
+
+Read \`docs/V0.3_ADAPTIVE_REPAIR_ROUTING.md\` and
+\`prompts/V0.3_ADAPTIVE_REPAIR_MASTER.md\` for the full coordinator policy,
+Codex-direct evidence schema, and integration gate.
+The old R004 campaign's five-round budget remains exhausted; it must
+not be reset to obtain additional reviews.
+
 ## Why this repo exists
 
 Previous orchestration attempts spent too many tokens watching terminal output and repeatedly reasoning about partially-complete worker sessions. This lab isolates the orchestration problem from production projects and measures whether event/checkpoint-based coordination actually reduces cost and manual intervention.
