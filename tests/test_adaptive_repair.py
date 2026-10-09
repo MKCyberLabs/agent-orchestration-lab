@@ -79,6 +79,15 @@ class TestRepairRouter(unittest.TestCase):
         ])
         self.assertEqual(router.plan(p)["route"], "MANUAL_TRIAGE")
 
+    def test_disputed_current_finding_needs_triage(self):
+        p = packet(["SOL-R004-001"])
+        p["findings"][0]["status"] = "DISPUTED"
+        self.assertEqual(router.plan(p)["route"], "MANUAL_TRIAGE")
+
+    def test_pass_with_stale_open_state_rejected(self):
+        with self.assertRaises(router.RouteError):
+            router.plan(packet([], verdict="PASS"), state(["SOL-R004-001"]))
+
     def test_critical_needs_triage(self):
         p = packet(["SOL-R004-001"])
         p["findings"][0]["severity"] = "P0"
