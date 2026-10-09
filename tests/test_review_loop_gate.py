@@ -135,6 +135,66 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(state["open_tickets"], ["R001-P1-01", "R001-P1-02"])
         self.cli("review", "--report", str(self.report("FAIL", prior, "old.md")), success=False)
 
+    def test_codex_direct_evidence_integrates_without_cbds_report(self):
+        prior = self.call_git("rev-parse", "HEAD")
+        self.cli("init", "--max-rounds", "2", "--initial-ticket-ids", "SOL-R001-001")
+        failure = self.report("FAIL", prior, "fail.md", prior=[
+            {"id":"SOL-R001-001","status":"OPEN","evidence":"Still reproduced the original defect"}
+        ])
+        self.cli("review", "--report", str(failure))
+        (self.repo / "finance.ts").write_text("export const value = 5;\n")
+        sha = self.commit("codex focused repair")
+        log = self.root / "codex-run.log"
+        log.write_text("Codex implementation: source fix, regression suite and commit\n")
+        manifest = self.root / "implementation.json"
+
+        def write_manifest(**changes):
+            data = {
+                "route": "CODEX_DIRECT", "implementation_sha": sha,
+                "review_baseline_sha": prior, "model": "gpt-6.1-sol",
+                "sandbox": "workspace-write", "ticket_ids": ["SOL-R001-001"],
+                "implementation_log": str(log),
+            }
+            data.update(changes)
+            manifest.write_text(json.dumps(data))
+
+        write_manifest(implementation_sha="a" * 40)
+        self.cli("integrate", "--test-evidence", str(self.evidence),
+                 "--codex-implementation-evidence", str(manifest), success=False)
+        write_manifest(ticket_ids=[])
+        self.cli("integrate", "--test-evidence", str(self.evidence),
+                 "--codex-implementation-evidence", str(manifest), success=False)
+        write_manifest()
+        self.cli("integrate", "--test-evidence", str(self.evidence),
+                 "--codex-implementation-evidence", str(manifest),
+                 "--cbds-report-ids", "rpt_should_not_mix", success=False)
+        stage = self.cli("integrate", "--test-evidence", str(self.evidence),
+                         "--codex-implementation-evidence", str(manifest))
+        self.assertEqual(stage["stage"], "review_ready")
+        self.assertEqual(stage["review_count"], 1)
+        self.assertEqual(
+            json.loads((self.repo / ".cbds" / "review-loop-v02.json").read_text())["history"][-1]["implementation"]["mode"],
+            "codex_direct"
+        )
+
+    def test_codex_direct_cannot_bypass_exhausted_review_budget(self):
+        prior = self.call_git("rev-parse", "HEAD")
+        self.cli("init", "--max-rounds", "1")
+        self.cli("review", "--report", str(self.report("FAIL", prior, "onefail.md")))
+        (self.repo / "finance.ts").write_text("export const value = 7;\n")
+        sha = self.commit("late focused fix")
+        log = self.root / "codex-run.log"
+        log.write_text("Implementation of delayed fix\n")
+        manifest = self.root / "implementation.json"
+        manifest.write_text(json.dumps({
+            "route": "CODEX_DIRECT", "implementation_sha": sha,
+            "review_baseline_sha": prior, "model": "gpt-6.1-sol",
+            "sandbox": "workspace-write", "ticket_ids": ["SOL-R001-001"],
+            "implementation_log": str(log),
+        }))
+        self.cli("integrate", "--test-evidence", str(self.evidence),
+                 "--codex-implementation-evidence", str(manifest), success=False)
+
     def test_existing_history_uses_total_budget(self):
         sha = self.call_git("rev-parse", "HEAD")
         state = self.cli(
