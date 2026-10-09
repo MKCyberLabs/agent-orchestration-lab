@@ -18,10 +18,10 @@ Workers do their work independently and explicitly report completion. The orches
 ## V0.3 Adaptive Ticket Routing (current pilot)
 
 After every **validated independent Sol review**, run the offline
-\`scripts/route-repair.py\` selector. It chooses automatically:
+`scripts/route-repair.py` selector. It chooses automatically:
 
 - **1–4 unresolved tickets:** one Codex GPT-6.1 Sol High implementer,
-  \`workspace-write\`, in an isolated repair worktree.
+  `workspace-write`, in an isolated repair worktree.
 - **5+ unresolved tickets:** up to two AGY workers with real Herdr/cbds
   accepted completion reports and disjoint source file ownership.
 - **0 tickets:** no implementation required; evaluate independent release gates.
@@ -33,14 +33,14 @@ does not invoke models, bypass previous round caps, merge, or deploy.
 
 Quick command:
 
-\`\`\`bash
+```bash
 python3 scripts/route-repair.py --tickets /absolute/path/to/validated/tickets.json \
   --state /absolute/path/to/checkout/.cbds/review-loop-v02.json
 bash tests/test_v02_shell.sh
-\`\`\`
+```
 
-Read \`docs/V0.3_ADAPTIVE_REPAIR_ROUTING.md\` and
-\`prompts/V0.3_ADAPTIVE_REPAIR_MASTER.md\` for the full coordinator policy,
+Read `docs/V0.3_ADAPTIVE_REPAIR_ROUTING.md` and
+`prompts/V0.3_ADAPTIVE_REPAIR_MASTER.md` for the full coordinator policy,
 Codex-direct evidence schema, and integration gate.
 The old R004 campaign's five-round budget remains exhausted; it must
 not be reset to obtain additional reviews.
