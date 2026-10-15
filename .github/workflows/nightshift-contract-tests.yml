@@ -8,6 +8,7 @@ on:
       - 'scripts/nightshift.py'
       - 'tests/test_nightshift.py'
       - 'config/nightshift.example.json'
+      - 'config/backlog.example.json'
       - 'systemd/mk-nightshift@.*'
       - '.github/workflows/nightshift-contract-tests.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'scripts/nightshift.py'
       - 'tests/test_nightshift.py'
       - 'config/nightshift.example.json'
+      - 'config/backlog.example.json'
       - 'systemd/mk-nightshift@.*'
       - '.github/workflows/nightshift-contract-tests.yml'
 
@@ -30,7 +32,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Nightshift local safety tests (mock cbds)
+      - name: Real Git-worktree behavioral tests (mocked coding CLIs)
         run: python3 -m unittest discover -s tests -p 'test_nightshift.py' -v
-      - name: Compile controller
-        run: python3 -m py_compile scripts/nightshift.py
+      - name: Syntax check and example validation
+        run: |
+          python3 -m py_compile scripts/nightshift.py
+          python3 -m json.tool config/nightshift.example.json >/dev/null
+          python3 -m json.tool config/backlog.example.json >/dev/null
