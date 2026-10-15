@@ -201,5 +201,58 @@ class NightshiftTests(unittest.TestCase):
             n.load_backlog(self.root / "backlog.json", "lab")
 
 
+    def test_global_lock_prevents_parallel_projects(self):
+        with n.lock(self.c):
+            with self.assertRaises(n.Hold):
+                with n.lock(self.c):
+                    pass
+
+    def test_test_command_cannot_expand_changed_file_set(self):
+        self.tasks[0]["acceptance_commands"] = [
+            ["python3", "-c",
+             "from pathlib import Path; Path('src/b.py').write_text('VALUE = 99\\n')"]
+        ]
+        def good(cfg, repo, task, root, timeout):
+            (repo / "src" / "a.py").write_text("VALUE = 1\n")
+            return True, 10, root / "fake", False
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=good), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                state = n.campaign(self.c, root, self.tasks, self.clock)
+        self.assertEqual(state["phase"], "BLOCKED")
+        self.assertEqual(int(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 1)
+
+    def test_codex_json_turn_completion_parser(self):
+        with n.lock(self.c) as root:
+            def fake_process(argv, repo, logbase, timeout, stdin=None):
+                self.assertEqual(argv[0:2], ["codex", "exec"])
+                logbase.parent.mkdir(parents=True, exist_ok=True)
+                logbase.with_suffix(".stdout").write_text(
+                    '{"type":"turn.started"}\n'
+                    '{"type":"turn.completed","usage":{"total_tokens":410}}\n')
+                return 0, False
+            with patch.object(n, "process", side_effect=fake_process):
+                ok, usage, _, timed = n.worker(self.c, self.repo, self.tasks[0], root, 300)
+            self.assertTrue(ok)
+            self.assertEqual(usage, 410)
+            self.assertFalse(timed)
+
+    def test_agy_json_status_parser(self):
+        self.c["worker"] = "agy"
+        with n.lock(self.c) as root:
+            def fake_process(argv, repo, logbase, timeout, stdin=None):
+                self.assertEqual(argv[:2], ["agy", "-p"])
+                logbase.parent.mkdir(parents=True, exist_ok=True)
+                logbase.with_suffix(".stdout").write_text(
+                    json.dumps({"status": "SUCCESS", "usage": {"total_tokens": 1337}}))
+                return 0, False
+            with patch.object(n, "process", side_effect=fake_process):
+                ok, usage, _, timed = n.worker(self.c, self.repo, self.tasks[0], root, 300)
+            self.assertTrue(ok)
+            self.assertEqual(usage, 1337)
+            self.assertFalse(timed)
+
+
 if __name__ == "__main__":
     unittest.main()
