@@ -1,0 +1,10 @@
+[Unit]
+Description=MKCyberLabs night-shift reconciliation tick %i
+
+[Timer]
+OnCalendar=*-*-* 00,01,02,03,04,05:0/15:00
+Persistent=true
+Unit=mk-nightshift@%i.service
+
+[Install]
+WantedBy=timers.target
