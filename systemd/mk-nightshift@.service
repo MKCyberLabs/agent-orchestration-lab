@@ -1,0 +1,13 @@
+[Unit]
+Description=MKCyberLabs fail-closed night shift pilot %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/agent-orchestration-lab
+ExecStart=/usr/bin/python3 %h/agent-orchestration-lab/scripts/nightshift.py run --config %h/.config/mk-nightshift/%i.json
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
