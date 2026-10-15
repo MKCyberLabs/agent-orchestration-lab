@@ -1,236 +1,409 @@
 #!/usr/bin/env python3
-"""Fail-closed, single-task cbds night-shift pilot. No deployments or merges."""
+"""Single-process, zero-orchestrator-token night shift. Explicit approval required.
+
+No Herdr, cbds, agent polling, automatic merge, deploy, or destructive cleanup.
+Never run in a worktree containing personal or production data.
+"""
 from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
 from datetime import datetime, timedelta, time, timezone
 import fcntl
+import fnmatch
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
 
-ID = re.compile(r"^[a-z][a-z0-9_-]{1,47}$")
-CBDS_ID = re.compile(r"^(run|tsk|dsp)_[A-Za-z0-9_-]+$")
-STATES = {"RUN_CREATING", "RUN_CREATED", "TASK_CREATING", "TASK_CREATED", "DISPATCHING", "WAITING", "REVIEW_REQUIRED", "BLOCKED", "NEEDS_RECONCILIATION"}
-AMBIGUOUS = {"RUN_CREATING", "TASK_CREATING", "DISPATCHING"}
+ID = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{1,55}$")
+TZ = ZoneInfo("Asia/Kolkata")
+DENY = (".env", ".env.*", "**/.env", "**/.env.*", ".github/**",
+        "**/secrets/**", "**/*credential*", "**/*private_key*",
+        "**/deploy*", "**/flash*", "**/esptool*", "**/*.pem", "**/*.key")
+TERMINAL = {"VERIFIED_COMMITTED", "FAILED", "QUOTA_PAUSED"}
 
 
 class Hold(Exception):
     pass
 
 
-def require(condition: bool, message: str):
-    if not condition:
-        raise Hold(message)
+def require(ok, why):
+    if not ok:
+        raise Hold(why)
 
 
-def load_config(path: Path) -> dict:
-    c = json.loads(path.read_text(encoding="utf-8"))
-    require(c.get("schema_version") == 1, "unsupported config schema")
-    require(isinstance(c.get("project_id"), str) and ID.fullmatch(c["project_id"]), "invalid project_id")
-    for k in ("worktree", "task_file", "state_dir", "quota_file"):
-        require(isinstance(c.get(k), str) and Path(c[k]).is_absolute(), f"{k} must be an absolute path")
-    require(isinstance(c.get("approved"), bool), "approved must be explicit boolean")
-    require(c.get("timezone") == "Asia/Kolkata", "pilot requires Asia/Kolkata")
-    require(isinstance(c.get("agent"), str) and ID.fullmatch(c["agent"]), "invalid Herdr agent kind")
-    require(type(c.get("min_quota_percent")) in (int, float) and 0 <= c["min_quota_percent"] <= 100, "invalid minimum quota")
-    require(type(c.get("quota_max_age_minutes")) is int and 1 <= c["quota_max_age_minutes"] <= 1440, "invalid quota max age")
-    for k in ("start", "stop"):
-        require(re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", c.get(k, "")), f"invalid {k} clock")
-    require(c["start"] != c["stop"], "empty schedule window")
-    return c
+def clock():
+    return datetime.now(TZ)
 
 
-def now_local():
-    return datetime.now(ZoneInfo("Asia/Kolkata"))
-
-
-def active_window(c: dict, instant: datetime):
-    local = instant.astimezone(ZoneInfo(c["timezone"]))
-    s = time.fromisoformat(c["start"])
-    e = time.fromisoformat(c["stop"])
-    # Cross-midnight windows are tied to the preceding calendar date.
-    if s < e:
-        if not s <= local.timetz().replace(tzinfo=None) < e:
-            return None
-        return local.date().isoformat()
-    clock = local.timetz().replace(tzinfo=None)
-    if clock >= s:
-        return local.date().isoformat()
-    if clock < e:
-        return (local.date() - timedelta(days=1)).isoformat()
-    return None
-
-
-def ensure_preflight(c: dict, *, check_quota=True):
-    repo = Path(c["worktree"])
-    require(repo.is_dir() and Path(c["task_file"]).is_file(), "worktree or approved task file missing")
-    require(shutil.which("cbds") is not None and shutil.which("git") is not None, "cbds/git missing")
-    result = subprocess.run(["git", "-C", str(repo), "status", "--porcelain"], capture_output=True, text=True, timeout=15)
-    require(result.returncode == 0 and not result.stdout.strip(), "worktree not clean")
-    branch = subprocess.run(["git", "-C", str(repo), "branch", "--show-current"], capture_output=True, text=True, timeout=15)
-    require(branch.returncode == 0 and branch.stdout.strip() not in ("", "main", "master"), "not an isolated feature branch")
-    # Do not allow an unattended worker to receive unrestricted or very large instructions.
-    require(Path(c["task_file"]).stat().st_size <= 12000, "task file exceeds 12 KB")
-    if check_quota:
-        quota_check(c)
-
-
-def quota_check(c: dict, *, instant=None):
-    path = Path(c["quota_file"])
-    require(path.is_file(), "quota snapshot missing: fail closed")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    stamp = datetime.fromisoformat(data["checked_at"])
-    require(stamp.tzinfo is not None, "quota timestamp missing timezone")
-    now = instant or datetime.now(timezone.utc)
-    age = (now - stamp).total_seconds() / 60
-    require(0 <= age <= c["quota_max_age_minutes"], "quota snapshot stale or in future")
-    agent = data.get("agents", {}).get(c["agent"], {})
-    require(agent.get("authenticated") is True, "agent not authenticated")
-    value = agent.get("remaining_percent")
-    require(type(value) in (int, float) and 0 <= value <= 100, "agent quota is unknown")
-    require(value >= c["min_quota_percent"], "insufficient agent quota")
-    return value
-
-
-def atomic_write(path: Path, value: dict):
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+def atomic_write(path, obj):
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     tmp = path.with_name(path.name + ".tmp." + str(os.getpid()))
-    with tmp.open("x", encoding="utf-8") as file:
+    with tmp.open("x", encoding="utf-8") as f:
         os.chmod(tmp, 0o600)
-        json.dump(value, file, indent=2, sort_keys=True)
-        file.write("\n")
-        file.flush()
-        os.fsync(file.fileno())
+        json.dump(obj, f, indent=2, sort_keys=True)
+        f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
     os.replace(tmp, path)
-    fd = os.open(str(path.parent), os.O_DIRECTORY)
+    fd = os.open(path.parent, os.O_DIRECTORY)
     try:
         os.fsync(fd)
     finally:
         os.close(fd)
 
 
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def validate_commands(cmds):
+    require(isinstance(cmds, list), "verification commands must be a list")
+    for cmd in cmds:
+        require(isinstance(cmd, list) and 1 <= len(cmd) <= 12 and
+                all(isinstance(a, str) and a and "\x00" not in a for a in cmd),
+                "verification must use argv arrays, not shell")
+        require(Path(cmd[0]).name in ("python", "python3", "pytest", "npm", "npx", "node", "arduino-cli"),
+                "unsupported verification executable: " + cmd[0])
+
+
+def load_config(path):
+    c = read_json(path)
+    require(c.get("schema_version") == 2, "expected V0.4 sequential schema_version=2")
+    require(isinstance(c.get("project_id"), str) and ID.fullmatch(c["project_id"]), "invalid project ID")
+    require(c.get("timezone") == "Asia/Kolkata", "timezone must be Asia/Kolkata")
+    require(type(c.get("approved")) is bool, "approved must be a boolean")
+    for field in ("worktree", "backlog_file", "state_dir"):
+        require(isinstance(c.get(field), str) and Path(c[field]).is_absolute(), field + " must be absolute")
+    require(c.get("worker") in ("codex", "agy"), "worker must be codex or agy")
+    require(re.fullmatch(r"nightshift/[A-Za-z0-9/_-]+", c.get("branch", "")), "require explicit nightshift/ branch")
+    require(type(c.get("max_minutes")) is int and 5 <= c["max_minutes"] <= 120, "invalid campaign minutes")
+    require(type(c.get("task_minutes")) is int and 1 <= c["task_minutes"] <= 60, "invalid task minutes")
+    require(type(c.get("max_tasks")) is int and 1 <= c["max_tasks"] <= 8, "invalid task count")
+    for field in ("start", "stop"):
+        require(isinstance(c.get(field), str) and re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", c[field]), "invalid " + field)
+    require(time.fromisoformat(c["start"]) < time.fromisoformat(c["stop"]),
+            "pilot requires a same-day clock window")
+    validate_commands(c.get("verify_commands"))
+    require(c["verify_commands"], "at least one host verification command is required")
+    return c
+
+
+def load_backlog(path, project):
+    obj = read_json(path)
+    require(obj.get("schema_version") == 1 and obj.get("project_id") == project, "backlog project/schema mismatch")
+    tasks = obj.get("tasks")
+    require(isinstance(tasks, list) and len(tasks) <= 30, "invalid backlog size")
+    seen = set()
+    for task in tasks:
+        tid = task.get("task_id")
+        require(isinstance(tid, str) and ID.fullmatch(tid) and tid not in seen, "duplicate or invalid task ID")
+        seen.add(tid)
+        require(type(task.get("approved")) is bool, "task needs explicit approval")
+        require(isinstance(task.get("objective"), str) and 20 <= len(task["objective"]) <= 3000, "task objective missing/broad")
+        require(isinstance(task.get("context_files"), list) and len(task["context_files"]) <= 12, "invalid context")
+        require(isinstance(task.get("allowed_paths"), list) and 1 <= len(task["allowed_paths"]) <= 12, "invalid allowed paths")
+        for name in task["context_files"] + task["allowed_paths"]:
+            require(isinstance(name, str) and name and not name.startswith("/") and
+                    ".." not in Path(name).parts and "\\" not in name and
+                    not name.startswith(".git") and name not in ("*", "**", "**/*"),
+                    "unsafe or broad relative path")
+        require(isinstance(task.get("depends_on", []), list), "invalid task dependencies")
+        require(type(task.get("max_diff_lines", 250)) is int and
+                1 <= task.get("max_diff_lines", 250) <= 500, "invalid diff budget")
+        validate_commands(task.get("acceptance_commands"))
+        require(task["acceptance_commands"], "task needs host acceptance command")
+    for task in tasks:
+        require(all(d in seen and d != task["task_id"] for d in task.get("depends_on", [])),
+                "invalid dependency reference")
+    return tasks
+
+
+def window(c, when):
+    local = when.astimezone(TZ)
+    start, stop = time.fromisoformat(c["start"]), time.fromisoformat(c["stop"])
+    if start <= local.time().replace(tzinfo=None) < stop:
+        return local.date().isoformat()
+    return None
+
+
+def seconds_left(c, started, now):
+    local = now.astimezone(TZ)
+    end_clock = datetime.combine(local.date(), time.fromisoformat(c["stop"]), TZ)
+    return min((end_clock - local).total_seconds(),
+               c["max_minutes"] * 60 - (now - started).total_seconds())
+
+
+def git(repo, *args, timeout=25):
+    p = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, timeout=timeout)
+    require(p.returncode == 0, "git " + " ".join(args[:3]) + " failed")
+    return p.stdout.decode("utf-8", errors="replace").strip()
+
+
+def preflight(c):
+    repo = Path(c["worktree"]).resolve(strict=True)
+    require((repo / ".git").is_file(), "require a dedicated linked Git worktree")
+    require(git(repo, "rev-parse", "--show-toplevel") == str(repo), "repository path mismatch")
+    require(git(repo, "branch", "--show-current") == c["branch"], "wrong/nightshift branch")
+    require(not git(repo, "status", "--porcelain=v1", "--untracked-files=all"), "worktree is dirty")
+    require(not (Path(c["state_dir"]).resolve() == repo or repo in Path(c["state_dir"]).resolve().parents),
+            "state must live outside repository")
+    require(shutil.which(c["worker"]) is not None and shutil.which("git") is not None,
+            "coding CLI or git unavailable")
+    return repo
+
+
 @contextmanager
-def locked_state(c: dict):
-    directory = Path(c["state_dir"]) / c["project_id"]
-    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    os.chmod(directory, 0o700)
-    lockpath = directory / "controller.lock"
-    with lockpath.open("a+") as lock:
-        os.chmod(lockpath, 0o600)
+def lock(c):
+    root = Path(c["state_dir"]) / c["project_id"]
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(root, 0o700)
+    with (root / "runner.lock").open("a+") as f:
+        os.chmod(root / "runner.lock", 0o600)
         try:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise Hold("another controller holds project lock")
-        yield directory / "state.json"
+            raise Hold("another night-shift process already owns this project")
+        yield root
 
 
-def cbds(c: dict, *args, timeout=90):
-    # Scope all calls to the durable cbds run. Never silently select a different open run.
-    p = subprocess.run(["cbds", *args, "--json"], cwd=c["worktree"], capture_output=True, text=True, timeout=timeout)
-    if p.returncode:
-        raise Hold(f"cbds {args[0]} returned exit {p.returncode}; inspect host logs, do not redispatch")
-    try:
-        obj = json.loads(p.stdout)
-    except json.JSONDecodeError as err:
-        raise Hold(f"cbds {args[0]} did not return valid JSON: {err}") from err
-    require(isinstance(obj, dict) and isinstance(obj.get("data"), dict), "unexpected cbds envelope")
-    return obj["data"]
-
-
-def id_from(data: dict, kind: str):
-    field = {"run": "run_id", "tsk": "task_id", "dsp": "dispatch_id"}[kind]
-    value = data.get(field)
-    require(isinstance(value, str) and CBDS_ID.fullmatch(value) and value.startswith(kind + "_"), f"missing validated {field}")
-    return value
-
-
-def mark(path: Path, state: dict, phase: str, **extra):
-    require(phase in STATES, f"invalid state: {phase}")
-    state.update(extra)
-    state["phase"] = phase
+def persist(root, state):
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
-    atomic_write(path, state)
+    atomic_write(root / "state.json", state)
 
 
-def main_run(c: dict, path: Path, instant: datetime):
-    existing = json.loads(path.read_text()) if path.exists() else None
-    if existing:
-        phase = existing.get("phase")
-        if phase in AMBIGUOUS:
-            mark(path, existing, "NEEDS_RECONCILIATION", reason="interrupted during non-idempotent cbds operation")
-            return existing
-        if phase == "WAITING":
-            # A worker can finish during a coordinator restart. Only an authoritative cbds report may settle.
+def paths_changed(repo):
+    raw = subprocess.run(["git", "-C", str(repo), "status", "--porcelain=v1",
+                          "-z", "--untracked-files=all"], capture_output=True, check=True).stdout
+    names = raw.decode("utf-8", "surrogateescape").split("\0")
+    names = [n for n in names if n]
+    result = []
+    i = 0
+    while i < len(names):
+        item = names[i]
+        require(len(item) >= 4, "unexpected git status entry")
+        code, name = item[:2], item[3:]
+        result.append((code, name))
+        if "R" in code or "C" in code:
+            i += 1
+            require(i < len(names), "malformed rename entry")
+            result.append((code, names[i]))
+        i += 1
+    return result
+
+
+def audit(repo, task, base):
+    require(git(repo, "rev-parse", "HEAD") == base, "worker modified Git history")
+    changed = paths_changed(repo)
+    require(changed, "agent produced no file changes")
+    allowed = task["allowed_paths"]
+    for code, name in changed:
+        pure = Path(name)
+        require(not pure.is_absolute() and ".." not in pure.parts and
+                not (repo / pure).is_symlink(), "unsafe or symlink path")
+        require(not any(fnmatch.fnmatchcase(name, pat) for pat in DENY), "forbidden path " + name)
+        require(any(fnmatch.fnmatchcase(name, pat) for pat in allowed), "out-of-scope path " + name)
+        require("D" not in code and "R" not in code and "C" not in code,
+                "file deletion/rename is not auto-approved")
+    patch = subprocess.run(["git", "-C", str(repo), "diff", "HEAD", "--unified=0", "--"],
+                           capture_output=True, check=True).stdout.decode("utf-8", "replace")
+    # Reject weakening existing regression assertions without manual review.
+    require(not any(line.startswith("-") and not line.startswith("---") and
+                    re.search(r"\b(assert|expect\s*\(|it\s*\(|test\s*\()", line)
+                    for line in patch.splitlines()), "potential test weakening requires review")
+    count = sum(1 for line in patch.splitlines() if line[:1] in ("+", "-") and
+                not line.startswith(("+++", "---")))
+    for code, name in changed:
+        if code == "??":
+            p = repo / name
+            require(p.is_file() and p.stat().st_size < 300000, "untracked file too large/nonregular")
+            count += len(p.read_bytes().splitlines())
+    require(count <= task.get("max_diff_lines", 250), "diff exceeds task budget")
+    return sorted({name for _, name in changed})
+
+
+def process(argv, repo, logbase, timeout, stdin=None):
+    logbase.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (logbase.with_suffix(".stdout")).open("wb") as out, \
+            (logbase.with_suffix(".stderr")).open("wb") as err:
+        os.chmod(out.name, 0o600)
+        os.chmod(err.name, 0o600)
+        p = subprocess.Popen(argv, cwd=repo, stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
+                             stdout=out, stderr=err, start_new_session=True)
+        timed_out = False
+        try:
+            p.communicate(stdin.encode("utf-8") if stdin is not None else None, timeout=max(1, int(timeout)))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            os.killpg(p.pid, signal.SIGTERM)
             try:
-                reports = cbds(c, "report", "list", "--run", existing["run_id"], "--task", existing["task_id"])
-                accepted = reports.get("reports")
-                require(isinstance(accepted, list), "cbds report list schema unknown")
-                matching = [r for r in accepted if isinstance(r, dict) and r.get("task_id") == existing["task_id"] and r.get("accepted") is True and r.get("outcome") in ("succeeded", "failed", "blocked")]
-                if len(matching) == 1:
-                    mark(path, existing, "REVIEW_REQUIRED" if matching[0]["outcome"] == "succeeded" else "BLOCKED", report_id=matching[0].get("report_id"), outcome=matching[0]["outcome"])
-                elif len(matching) > 1:
-                    mark(path, existing, "NEEDS_RECONCILIATION", reason="multiple accepted reports")
-                # Without a proven report, preserve WAITING. Do not relaunch.
-            except (Hold, KeyError) as exc:
-                mark(path, existing, "NEEDS_RECONCILIATION", reason=str(exc))
-            return existing
-        return existing  # One task per approval/window, never implicitly reset.
+                p.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(p.pid, signal.SIGKILL)
+                p.communicate()
+    return p.returncode, timed_out
 
-    require(active_window(c, instant) is not None, "outside approved night window")
-    require(c["approved"] is True, "dispatch not approved in config")
-    ensure_preflight(c)
-    state = {"schema_version": 1, "project_id": c["project_id"], "window_id": active_window(c, instant), "agent": c["agent"]}
-    mark(path, state, "RUN_CREATING")  # write-ahead ambiguity checkpoint
+
+def worker(c, repo, task, root, timeout):
+    context = "\n".join(task["context_files"])
+    prompt = ("Work ONLY inside this isolated worktree. Read AGENTS.md and listed context files first. "
+              "Do not commit, push, merge, deploy, flash hardware, edit credentials, or run git reset/clean. "
+              "Do not weaken tests. If ambiguous, report BLOCKED and do not edit. "
+              "Modify only the allowed paths. Host verification is authoritative.\n"
+              "TASK: " + task["task_id"] + "\nOBJECTIVE: " + task["objective"] +
+              "\nCONTEXT FILES:\n" + context + "\nALLOWED PATHS:\n" +
+              "\n".join(task["allowed_paths"]) + "\n")
+    logfile = root / "logs" / (task["task_id"] + "-" + str(int(datetime.now().timestamp())))
+    if c["worker"] == "codex":
+        argv = ["codex", "exec", "--sandbox", "workspace-write", "--ephemeral", "--json", "-"]
+        rc, timed = process(argv, repo, logfile, timeout, stdin=prompt)
+        result = False
+        tokens = None
+        with logfile.with_suffix(".stdout").open(encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("type") == "turn.completed":
+                    result = True
+                    usage = event.get("usage", {})
+                    tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
+                if event.get("type") in ("turn.failed", "error"):
+                    result = False
+        return rc == 0 and not timed and result, tokens, logfile, timed
+    argv = ["agy", "-p", prompt, "--output-format", "json",
+            "--print-timeout", str(max(1, int(timeout / 60))) + "m"]
+    rc, timed = process(argv, repo, logfile, timeout)
     try:
-        run_id = id_from(cbds(c, "run", "create", "--objective", f"Nightshift {c['project_id']} {state['window_id']}"), "run")
-    except (Hold, subprocess.TimeoutExpired) as exc:
-        mark(path, state, "NEEDS_RECONCILIATION", reason=f"uncertain run creation: {exc}")
-        return state
-    mark(path, state, "RUN_CREATED", run_id=run_id)
-    mark(path, state, "TASK_CREATING")
+        obj = json.loads(logfile.with_suffix(".stdout").read_text(encoding="utf-8"))
+        usage = obj.get("usage", {})
+        return rc == 0 and not timed and obj.get("status") == "SUCCESS", \
+               usage.get("total_tokens"), logfile, timed
+    except (OSError, ValueError, AttributeError):
+        return False, None, logfile, timed
+
+
+def verify(c, repo, task, root, seconds):
+    commands = task["acceptance_commands"] + c["verify_commands"]
+    for index, cmd in enumerate(commands):
+        rc, timed = process(cmd, repo, root / "logs" / (task["task_id"] + "-test-" + str(index)),
+                            min(180, seconds))
+        require(rc == 0 and not timed, "host verification failed: " + " ".join(cmd))
+    return len(commands)
+
+
+def report(root, c, state, tasks):
+    lines = ["# Night Shift — " + c["project_id"], "",
+             "Campaign: " + str(state.get("window_id", "none")), "",
+             "Branch: " + c["branch"], "",
+             "Status: " + state.get("phase", "NOT_STARTED"), "",
+             "| Task | Result | Commit |", "|---|---|---|"]
+    results = state.get("tasks", {})
+    for task in tasks:
+        r = results.get(task["task_id"], {})
+        lines.append("| " + task["task_id"] + " | " + r.get("phase", "QUEUED") +
+                     " | " + r.get("sha", "-") + " |")
+    lines += ["", "## Next approved tasks", ""]
+    for task in tasks:
+        if task["approved"] and task["task_id"] not in results:
+            lines.append("- " + task["task_id"] + ": " + task["objective"][:180].replace("\n", " "))
+    if state.get("blocker"):
+        lines += ["", "## Blocker", "", state["blocker"]]
+    output = root / "reports" / (str(state.get("window_id", "undated")) + "-morning.md")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.chmod(output, 0o600)
+    return output
+
+
+def campaign(c, root, tasks, now=None):
+    now = now or clock()
+    win = window(c, now)
+    require(c["approved"] and win is not None, "not approved or outside scheduled window")
+    repo = preflight(c)
+    state_file = root / "state.json"
+    state = read_json(state_file) if state_file.exists() else {"tasks": {}, "phase": "READY"}
+    require(state.get("phase") not in ("WORKER_RUNNING", "TEST_RUNNING", "BLOCKED"),
+            "interrupted or blocked prior task needs manual reconciliation")
+    if state.get("window_id") != win:
+        state["window_id"] = win
+        state["window_completed"] = 0
+    started = now
+    state["phase"] = "RUNNING"
+    persist(root, state)
     try:
-        spec = Path(c["task_file"]).read_text(encoding="utf-8")
-        task_id = id_from(cbds(c, "task", "create", "--run", run_id, "--spec", spec, "--max-attempts", "1"), "tsk")
-    except (Hold, subprocess.TimeoutExpired) as exc:
-        mark(path, state, "NEEDS_RECONCILIATION", reason=f"uncertain task creation: {exc}")
-        return state
-    mark(path, state, "TASK_CREATED", task_id=task_id)
-    mark(path, state, "DISPATCHING")
-    try:
-        dispatch_id = id_from(cbds(c, "dispatch", "start", "--run", run_id, "--task", task_id, "--agent", c["agent"], "--cwd", c["worktree"], timeout=120), "dsp")
-    except (Hold, subprocess.TimeoutExpired) as exc:
-        mark(path, state, "NEEDS_RECONCILIATION", reason=f"uncertain dispatch: {exc}")
-        return state
-    mark(path, state, "WAITING", dispatch_id=dispatch_id)
+        for task in tasks:
+            if state["window_completed"] >= c["max_tasks"] or seconds_left(c, started, clock()) < 60:
+                break
+            tid = task["task_id"]
+            if not task["approved"] or tid in state["tasks"]:
+                continue
+            if not all(state["tasks"].get(dep, {}).get("phase") == "VERIFIED_COMMITTED"
+                       for dep in task.get("depends_on", [])):
+                continue
+            base = git(repo, "rev-parse", "HEAD")
+            state["phase"] = "WORKER_RUNNING"
+            state["tasks"][tid] = {"phase": "WORKER_RUNNING", "base_sha": base}
+            persist(root, state)
+            budget = min(c["task_minutes"] * 60, int(seconds_left(c, started, clock())) - 30)
+            ok, tokens, log, timed = worker(c, repo, task, root, budget)
+            state["tasks"][tid]["tokens"] = tokens
+            state["tasks"][tid]["log"] = str(log)
+            require(ok, "worker failed/timeout; retained isolated changes for manual inspection: " + tid)
+            state["phase"] = "TEST_RUNNING"
+            state["tasks"][tid]["phase"] = "TEST_RUNNING"
+            persist(root, state)
+            files = audit(repo, task, base)
+            verify(c, repo, task, root, int(seconds_left(c, started, clock())))
+            require(git(repo, "rev-parse", "HEAD") == base, "verification unexpectedly committed")
+            git(repo, "add", "--", *files)
+            git(repo, "commit", "-m", "nightshift(" + tid + "): verified implementation")
+            sha = git(repo, "rev-parse", "HEAD")
+            require(not git(repo, "status", "--porcelain=v1", "--untracked-files=all"),
+                    "post-commit worktree dirty")
+            state["tasks"][tid].update({"phase": "VERIFIED_COMMITTED", "sha": sha, "files": files})
+            state["window_completed"] += 1
+            state["phase"] = "RUNNING"
+            persist(root, state)
+        state["phase"] = "REVIEW_REQUIRED"
+    except Hold as exc:
+        state["phase"] = "BLOCKED"
+        state["blocker"] = str(exc)
+        persist(root, state)
+    persist(root, state)
     return state
 
 
 def cli(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("doctor", "run", "status"))
-    parser.add_argument("--config", required=True, type=Path)
-    args = parser.parse_args(argv)
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("action", choices=("doctor", "run", "status", "report"))
+    p.add_argument("--config", type=Path, required=True)
+    a = p.parse_args(argv)
     try:
-        c = load_config(args.config)
-        with locked_state(c) as path:
-            if args.action == "status":
-                output = json.loads(path.read_text()) if path.exists() else {"phase": "NOT_STARTED"}
-            elif args.action == "doctor":
-                ensure_preflight(c)
-                output = {"status": "PASS", "approved": c["approved"], "project_id": c["project_id"], "within_window": active_window(c, now_local()) is not None}
+        c = load_config(a.config)
+        with lock(c) as root:
+            tasks = load_backlog(c["backlog_file"], c["project_id"])
+            if a.action == "doctor":
+                repo = preflight(c)
+                value = {"status": "PASS", "repo": str(repo), "approved": c["approved"],
+                         "eligible_now": window(c, clock()) is not None, "queued": len(tasks)}
+            elif a.action == "run":
+                value = campaign(c, root, tasks)
             else:
-                output = main_run(c, path, now_local())
-        print(json.dumps(output, indent=2, sort_keys=True))
-        return 2 if output.get("phase") in ("NEEDS_RECONCILIATION", "BLOCKED") else 0
-    except (Hold, ValueError, KeyError, OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
-        print(f"HOLD: {exc}", file=sys.stderr)
+                value = read_json(root / "state.json") if (root / "state.json").exists() else {"phase": "NOT_STARTED", "tasks": {}}
+            if a.action in ("run", "report"):
+                value["morning_report"] = str(report(root, c, value, tasks))
+        print(json.dumps(value, indent=2, sort_keys=True))
+        return 2 if value.get("phase") == "BLOCKED" else 0
+    except (Hold, OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+        print("HOLD: " + str(exc), file=sys.stderr)
         return 2
 
 
