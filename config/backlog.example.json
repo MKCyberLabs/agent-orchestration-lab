@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "project_id": "nutrisnap-pilot",
+  "tasks": [
+    {
+      "task_id": "NS_FIXTURE_01",
+      "approved": false,
+      "objective": "In an isolated development fixture, implement an approved small regression fix limited to the specific utility file and test the documented behavior.",
+      "context_files": [
+        "AGENTS.md"
+      ],
+      "allowed_paths": [
+        "src/lib/example-utility.ts"
+      ],
+      "depends_on": [],
+      "max_diff_lines": 150,
+      "acceptance_commands": [
+        [
+          "npm",
+          "run",
+          "typecheck"
+        ]
+      ]
+    }
+  ]
+}
