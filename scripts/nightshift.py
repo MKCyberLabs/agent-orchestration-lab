@@ -161,15 +161,21 @@ def preflight(c):
 
 @contextmanager
 def lock(c):
-    root = Path(c["state_dir"]) / c["project_id"]
+    parent = Path(c["state_dir"])
+    parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(parent, 0o700)
+    root = parent / c["project_id"]
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(root, 0o700)
-    with (root / "runner.lock").open("a+") as f:
-        os.chmod(root / "runner.lock", 0o600)
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise Hold("another night-shift process already owns this project")
+    # Global capacity lock prevents two projects consuming the same model quota.
+    with (parent / "global.lock").open("a+") as global_file, \
+         (root / "runner.lock").open("a+") as project_file:
+        for f in (global_file, project_file):
+            os.chmod(f.name, 0o600)
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Hold("another night-shift process already owns model/project capacity")
         yield root
 
 
@@ -364,6 +370,7 @@ def campaign(c, root, tasks, now=None):
             persist(root, state)
             files = audit(repo, task, base)
             verify(c, repo, task, root, int(seconds_left(c, started, clock())))
+            require(audit(repo, task, base) == files, "verification changed the audited file set")
             require(git(repo, "rev-parse", "HEAD") == base, "verification unexpectedly committed")
             git(repo, "add", "--", *files)
             git(repo, "commit", "-m", "nightshift(" + tid + "): verified implementation")
