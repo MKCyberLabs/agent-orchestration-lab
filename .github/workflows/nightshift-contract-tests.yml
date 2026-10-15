@@ -1,0 +1,36 @@
+name: Nightshift Pilot Contract Tests
+
+on:
+  push:
+    branches:
+      - feature/v0.4-nightshift-pilot
+    paths:
+      - 'scripts/nightshift.py'
+      - 'tests/test_nightshift.py'
+      - 'config/nightshift.example.json'
+      - 'systemd/mk-nightshift@.*'
+      - '.github/workflows/nightshift-contract-tests.yml'
+  pull_request:
+    paths:
+      - 'scripts/nightshift.py'
+      - 'tests/test_nightshift.py'
+      - 'config/nightshift.example.json'
+      - 'systemd/mk-nightshift@.*'
+      - '.github/workflows/nightshift-contract-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Nightshift local safety tests (mock cbds)
+        run: python3 -m unittest discover -s tests -p 'test_nightshift.py' -v
+      - name: Compile controller
+        run: python3 -m py_compile scripts/nightshift.py
