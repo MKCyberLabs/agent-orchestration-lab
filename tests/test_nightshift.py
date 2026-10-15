@@ -122,11 +122,10 @@ class NightshiftTests(unittest.TestCase):
 
     def test_success_two_tasks_in_one_run(self):
         state = self.run_campaign()
-        self.assertEqual(state["phase"], "REVIEW_REQUIRED")
+        self.assertEqual(state["phase"], "REVIEW_REQUIRED", state.get("blocker"))
         self.assertEqual(state["window_completed"], 2)
         self.assertEqual(state["tasks"]["A01"]["phase"], "VERIFIED_COMMITTED")
         self.assertEqual(state["tasks"]["B01"]["phase"], "VERIFIED_COMMITTED")
-        self.assertEqual(len(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 1) if False else None
         self.assertEqual(int(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 3)
         with n.lock(self.c) as root:
             report = n.report(root, self.c, state, self.tasks)
