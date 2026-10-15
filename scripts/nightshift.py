@@ -234,8 +234,10 @@ def process(argv, repo, logbase, timeout, stdin=None):
             (logbase.with_suffix(".stderr")).open("wb") as err:
         os.chmod(out.name, 0o600)
         os.chmod(err.name, 0o600)
+        env = dict(os.environ)
+        env["PYTHONDONTWRITEBYTECODE"] = "1"  # host tests must not dirty fixture with pyc files
         p = subprocess.Popen(argv, cwd=repo, stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
-                             stdout=out, stderr=err, start_new_session=True)
+                             stdout=out, stderr=err, start_new_session=True, env=env)
         timed_out = False
         try:
             p.communicate(stdin.encode("utf-8") if stdin is not None else None, timeout=max(1, int(timeout)))
