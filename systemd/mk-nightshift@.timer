@@ -1,9 +1,9 @@
 [Unit]
-Description=MKCyberLabs night-shift reconciliation tick %i
+Description=MKCyberLabs single nightly coding trigger %i
 
 [Timer]
-OnCalendar=*-*-* 00,01,02,03,04,05:0/15:00
-Persistent=true
+OnCalendar=*-*-* 00:15:00
+Persistent=false
 Unit=mk-nightshift@%i.service
 
 [Install]
