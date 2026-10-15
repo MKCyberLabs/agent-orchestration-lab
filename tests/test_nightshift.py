@@ -2,15 +2,20 @@ import importlib.util
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-MODULE = Path(__file__).resolve().parents[1] / 'scripts' / 'nightshift.py'
-spec = importlib.util.spec_from_file_location('nightshift', MODULE)
+MODULE = Path(__file__).resolve().parents[1] / "scripts" / "nightshift.py"
+spec = importlib.util.spec_from_file_location("nightshift", MODULE)
 n = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(n)
+
+
+def cmd(*args, cwd=None):
+    return subprocess.run(args, cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
 
 
 class NightshiftTests(unittest.TestCase):
@@ -18,106 +23,184 @@ class NightshiftTests(unittest.TestCase):
         self.t = tempfile.TemporaryDirectory()
         self.addCleanup(self.t.cleanup)
         self.root = Path(self.t.name)
-        self.task = self.root / 'task.md'
-        self.task.write_text('Implement only a safe fixture change and run tests.')
-        self.quota = self.root / 'quota.json'
-        self.c = {'schema_version': 1, 'project_id': 'lab', 'worktree': str(self.root),
-                  'task_file': str(self.task), 'quota_file': str(self.quota),
-                  'state_dir': str(self.root/'state'), 'approved': True, 'agent': 'gemini',
-                  'timezone': 'Asia/Kolkata', 'start': '00:15', 'stop': '05:15',
-                  'quota_max_age_minutes': 30, 'min_quota_percent': 20}
-        self.path = self.root / 'state.json'
-        self.clock = datetime(2026, 10, 16, 1, 30, tzinfo=ZoneInfo('Asia/Kolkata'))
-        self.quota.write_text(json.dumps({'checked_at': self.clock.isoformat(), 'agents': {'gemini': {'authenticated': True, 'remaining_percent': 75}}}))
+        base = self.root / "base"
+        base.mkdir()
+        cmd("git", "init", "-b", "main", str(base))
+        cmd("git", "config", "user.email", "test@example.invalid", cwd=base)
+        cmd("git", "config", "user.name", "Nightshift Fixture", cwd=base)
+        (base / "src").mkdir()
+        (base / "src" / "a.py").write_text("VALUE = 0\n")
+        (base / "src" / "b.py").write_text("VALUE = 0\n")
+        (base / "AGENTS.md").write_text("Fixture agent instructions\n")
+        cmd("git", "add", ".", cwd=base)
+        cmd("git", "commit", "-m", "fixture", cwd=base)
+        self.repo = self.root / "nightshift"
+        cmd("git", "worktree", "add", "-b", "nightshift/pilot", str(self.repo), cwd=base)
+        self.clock = datetime(2026, 10, 16, 0, 30, tzinfo=ZoneInfo("Asia/Kolkata"))
+        self.c = {
+            "schema_version": 2, "project_id": "lab", "worktree": str(self.repo),
+            "backlog_file": str(self.root / "backlog.json"),
+            "state_dir": str(self.root / "state"),
+            "timezone": "Asia/Kolkata", "branch": "nightshift/pilot",
+            "worker": "codex", "approved": True, "max_minutes": 90,
+            "task_minutes": 15, "max_tasks": 4,
+            "start": "00:15", "stop": "02:15",
+            "verify_commands": [["python3", "-c", "assert True"]],
+        }
+        self.tasks = [
+            {"task_id": "A01", "approved": True, "objective": "Set VALUE to 1 in src/a.py without modifying other files.",
+             "context_files": ["AGENTS.md"], "allowed_paths": ["src/a.py"], "depends_on": [],
+             "max_diff_lines": 100, "acceptance_commands": [["python3", "-c", "from src.a import VALUE; assert VALUE == 1"]]},
+            {"task_id": "B01", "approved": True, "objective": "Set VALUE to 2 in src/b.py without modifying other files.",
+             "context_files": ["AGENTS.md"], "allowed_paths": ["src/b.py"], "depends_on": ["A01"],
+             "max_diff_lines": 100, "acceptance_commands": [["python3", "-c", "from src.b import VALUE; assert VALUE == 2"]]},
+        ]
+        self.backlog()
+        self.configpath = self.root / "config.json"
+        self.config()
 
-    def test_window_in_and_out(self):
-        self.assertEqual(n.active_window(self.c, self.clock), '2026-10-16')
-        self.assertIsNone(n.active_window(self.c, self.clock.replace(hour=5, minute=15)))
-        self.assertIsNone(n.active_window(self.c, self.clock.replace(hour=0, minute=14)))
+    def backlog(self):
+        (self.root / "backlog.json").write_text(json.dumps({"schema_version": 1, "project_id": "lab", "tasks": self.tasks}))
 
-    def test_window_cross_midnight(self):
-        self.c['start'], self.c['stop'] = '23:00', '02:00'
-        self.assertEqual(n.active_window(self.c, self.clock), '2026-10-15')
-        self.assertIsNone(n.active_window(self.c, self.clock.replace(hour=3)))
+    def config(self):
+        self.configpath.write_text(json.dumps(self.c))
 
-    def test_quota_unknown_stale_and_low_fail_closed(self):
-        self.assertEqual(n.quota_check(self.c, instant=self.clock), 75)
+    def fake_worker(self, cfg, repo, task, root, timeout):
+        filename = "a.py" if task["task_id"] == "A01" else "b.py"
+        (repo / "src" / filename).write_text("VALUE = " + ("1" if filename == "a.py" else "2") + "\n")
+        return True, 123, root / "fake-agent", False
+
+    def run_campaign(self):
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=self.fake_worker), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                return n.campaign(self.c, root, self.tasks, self.clock)
+
+    def test_schedule_window(self):
+        self.assertEqual(n.window(self.c, self.clock), "2026-10-16")
+        self.assertIsNone(n.window(self.c, self.clock.replace(hour=2, minute=15)))
+        self.assertIsNone(n.window(self.c, self.clock.replace(hour=0, minute=14)))
+
+    def test_strict_config(self):
+        self.assertEqual(n.load_config(self.configpath)["branch"], "nightshift/pilot")
+        self.c["branch"] = "main"
+        self.config()
         with self.assertRaises(n.Hold):
-            n.quota_check(self.c, instant=self.clock + timedelta(hours=1))
-        self.c['min_quota_percent'] = 90
+            n.load_config(self.configpath)
+
+    def test_reject_shell_command_string(self):
         with self.assertRaises(n.Hold):
-            n.quota_check(self.c, instant=self.clock)
-        self.c['min_quota_percent'] = 20
-        self.quota.write_text(json.dumps({'checked_at': self.clock.isoformat(), 'agents': {'gemini': {'authenticated': True}}}))
+            n.validate_commands(["npm run test"])
         with self.assertRaises(n.Hold):
-            n.quota_check(self.c, instant=self.clock)
+            n.validate_commands([["bash", "-c", "rm -rf /"]])
 
-    def test_write_atomic_private(self):
-        n.atomic_write(self.path, {'phase': 'WAITING'})
-        self.assertEqual(json.loads(self.path.read_text()), {'phase': 'WAITING'})
-        self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
+    def test_unapproved_task(self):
+        self.tasks[0]["approved"] = False
+        self.backlog()
+        self.assertFalse(n.load_backlog(self.root / "backlog.json", "lab")[0]["approved"])
 
-    def test_dispatch_once_and_resume_without_second_dispatch(self):
-        calls = []
-        def fake_cbds(_c, *args, **kwargs):
-            calls.append(args[:2])
-            if args[:2] == ('run', 'create'): return {'run_id': 'run_123'}
-            if args[:2] == ('task', 'create'): return {'task_id': 'tsk_456'}
-            if args[:2] == ('dispatch', 'start'): return {'dispatch_id': 'dsp_789'}
-            if args[:2] == ('report', 'list'): return {'reports': []}
-            raise AssertionError(args)
-        with patch.object(n, 'ensure_preflight'), patch.object(n, 'cbds', side_effect=fake_cbds):
-            initial = n.main_run(self.c, self.path, self.clock)
-            second = n.main_run(self.c, self.path, self.clock)
-        self.assertEqual(initial['phase'], 'WAITING')
-        self.assertEqual(second['phase'], 'WAITING')
-        self.assertEqual(calls.count(('dispatch', 'start')), 1)
-
-    def test_crash_before_receipt_never_redispatches(self):
-        for phase in n.AMBIGUOUS:
-            with self.subTest(phase=phase):
-                n.atomic_write(self.path, {'phase': phase, 'run_id': 'run_1'})
-                with patch.object(n, 'cbds', side_effect=AssertionError('should not call cbds')):
-                    state = n.main_run(self.c, self.path, self.clock)
-                self.assertEqual(state['phase'], 'NEEDS_RECONCILIATION')
-
-    def test_report_must_be_accepted(self):
-        n.atomic_write(self.path, {'phase': 'WAITING', 'run_id': 'run_1', 'task_id': 'tsk_2'})
-        with patch.object(n, 'cbds', return_value={'reports': [{'task_id': 'tsk_2', 'outcome': 'succeeded', 'accepted': False}]}):
-            self.assertEqual(n.main_run(self.c, self.path, self.clock)['phase'], 'WAITING')
-        with patch.object(n, 'cbds', return_value={'reports': [{'task_id': 'tsk_2', 'outcome': 'succeeded', 'accepted': True, 'report_id': 'rpt_3'}]}):
-            result = n.main_run(self.c, self.path, self.clock)
-        self.assertEqual(result['phase'], 'REVIEW_REQUIRED')
-        self.assertEqual(result['report_id'], 'rpt_3')
-
-    def test_unknown_report_schema_fails_closed(self):
-        n.atomic_write(self.path, {'phase': 'WAITING', 'run_id': 'run_1', 'task_id': 'tsk_2'})
-        with patch.object(n, 'cbds', return_value={'something': []}):
-            self.assertEqual(n.main_run(self.c, self.path, self.clock)['phase'], 'NEEDS_RECONCILIATION')
-
-    def test_refuse_unapproved_or_outside_window(self):
-        self.c['approved'] = False
-        with self.assertRaises(n.Hold), patch.object(n, 'cbds', side_effect=AssertionError):
-            n.main_run(self.c, self.path, self.clock)
-        self.c['approved'] = True
-        with self.assertRaises(n.Hold), patch.object(n, 'cbds', side_effect=AssertionError):
-            n.main_run(self.c, self.path, self.clock.replace(hour=15))
-
-    def test_bad_identifiers_rejected(self):
+    def test_duplicate_task(self):
+        self.tasks.append(dict(self.tasks[0]))
+        self.backlog()
         with self.assertRaises(n.Hold):
-            n.id_from({'run_id': 'garbage'}, 'run')
+            n.load_backlog(self.root / "backlog.json", "lab")
+
+    def test_atomic_permissions(self):
+        dst = self.root / "test-state.json"
+        n.atomic_write(dst, {"phase": "RUNNING"})
+        self.assertEqual(dst.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(dst.read_text())["phase"], "RUNNING")
+
+    def test_preflight_clean_feature_worktree(self):
+        with patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            self.assertEqual(n.preflight(self.c), self.repo)
+            (self.repo / "untracked").write_text("do not touch")
+            with self.assertRaises(n.Hold):
+                n.preflight(self.c)
+        self.assertTrue((self.repo / "untracked").exists())
+
+    def test_success_two_tasks_in_one_run(self):
+        state = self.run_campaign()
+        self.assertEqual(state["phase"], "REVIEW_REQUIRED")
+        self.assertEqual(state["window_completed"], 2)
+        self.assertEqual(state["tasks"]["A01"]["phase"], "VERIFIED_COMMITTED")
+        self.assertEqual(state["tasks"]["B01"]["phase"], "VERIFIED_COMMITTED")
+        self.assertEqual(len(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 1) if False else None
+        self.assertEqual(int(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 3)
+        with n.lock(self.c) as root:
+            report = n.report(root, self.c, state, self.tasks)
+        self.assertIn("A01", report.read_text())
+
+    def test_repeat_does_not_redo_completed_tasks(self):
+        self.run_campaign()
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=AssertionError("duplicate worker")), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                state = n.campaign(self.c, root, self.tasks, self.clock)
+        self.assertEqual(state["window_completed"], 2)
+
+    def test_out_of_scope_change_blocks_without_deleting(self):
+        def wrong(cfg, repo, task, root, timeout):
+            (repo / "src" / "b.py").write_text("VALUE = 89\n")
+            return True, 10, root / "fake", False
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=wrong), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                state = n.campaign(self.c, root, self.tasks, self.clock)
+        self.assertEqual(state["phase"], "BLOCKED")
+        self.assertEqual((self.repo / "src" / "b.py").read_text(), "VALUE = 89\n")
+        self.assertEqual(int(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 1)
+
+    def test_host_acceptance_failure_prevents_commit(self):
+        def wrong(cfg, repo, task, root, timeout):
+            (repo / "src" / "a.py").write_text("VALUE = 7\n")
+            return True, 10, root / "fake", False
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=wrong), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                state = n.campaign(self.c, root, self.tasks, self.clock)
+        self.assertEqual(state["phase"], "BLOCKED")
+        self.assertEqual(int(cmd("git", "rev-list", "--count", "HEAD", cwd=self.repo)), 1)
+
+    def test_interrupted_worker_never_redispatched(self):
+        with n.lock(self.c) as root:
+            n.atomic_write(root / "state.json", {"phase": "WORKER_RUNNING", "tasks": {"A01": {"phase": "WORKER_RUNNING"}}})
+            with patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+                with self.assertRaises(n.Hold):
+                    n.campaign(self.c, root, self.tasks, self.clock)
+
+    def test_failed_worker_keeps_changes_for_inspection(self):
+        def failure(cfg, repo, task, root, timeout):
+            (repo / "src" / "a.py").write_text("VALUE = 5\n")
+            return False, None, root / "failed", True
+        with patch.object(n, "clock", return_value=self.clock), \
+             patch.object(n, "worker", side_effect=failure), \
+             patch.object(n.shutil, "which", return_value="/usr/bin/codex"):
+            with n.lock(self.c) as root:
+                state = n.campaign(self.c, root, self.tasks, self.clock)
+        self.assertEqual(state["phase"], "BLOCKED")
+        self.assertEqual((self.repo / "src" / "a.py").read_text(), "VALUE = 5\n")
+
+    def test_no_changes_blocks(self):
         with self.assertRaises(n.Hold):
-            n.id_from({'task_id': 'run_wrong'}, 'tsk')
+            n.audit(self.repo, self.tasks[0], cmd("git", "rev-parse", "HEAD", cwd=self.repo))
 
-    def test_config_is_strict(self):
-        config = self.root/'config.json'
-        config.write_text(json.dumps(self.c))
-        self.assertEqual(n.load_config(config)['project_id'], 'lab')
-        self.c['worktree'] = '../relative'
-        config.write_text(json.dumps(self.c))
+    def test_dependency_skipped_when_unapproved(self):
+        self.tasks[0]["approved"] = False
+        state = self.run_campaign()
+        self.assertEqual(state["window_completed"], 0)
+        self.assertEqual(state["phase"], "REVIEW_REQUIRED")
+
+    def test_broad_glob_disallowed(self):
+        self.tasks[0]["allowed_paths"] = ["**/*"]
+        self.backlog()
         with self.assertRaises(n.Hold):
-            n.load_config(config)
+            n.load_backlog(self.root / "backlog.json", "lab")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
