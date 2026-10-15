@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "project_id": "nutrisnap-pilot",
+  "worktree": "/home/openclaw/Projects/NutriSnap-nightshift-isolated",
+  "task_file": "/home/openclaw/.config/mk-nightshift/approved-ticket.md",
+  "state_dir": "/home/openclaw/.local/state/mk-nightshift",
+  "quota_file": "/home/openclaw/.local/state/mk-nightshift/quota-snapshot.json",
+  "timezone": "Asia/Kolkata",
+  "start": "00:15",
+  "stop": "05:15",
+  "agent": "gemini",
+  "min_quota_percent": 20,
+  "quota_max_age_minutes": 30,
+  "approved": false
+}
