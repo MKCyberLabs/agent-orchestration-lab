@@ -1,73 +1,77 @@
-# V0.4: fail-closed night-shift pilot (NOT release-approved)
+# V0.4 — Sequential coding night shift (pilot; no unattended activation)
 
-This is a single-task-per-project controller, not yet a complete autonomous night-shift system. Its purpose is to prove durable cbds dispatch, quota gating, crash safety and recovery without using an LLM to watch terminal output.
+This branch implements a zero-LLM **orchestrator**: a deterministic Python runner sequentially invokes **Codex CLI** or **Antigravity CLI** for approved, narrowly scoped tasks. Coding workers still spend model tokens. The runner itself does not call a coordinator model.
 
-## What is implemented
+It replaces Herdr/cbds in the *new* script; legacy experimentation files remain untouched.
 
-- Owner-controlled schedule and explicit approved: false by default.
-- Exactly one task/dispatch per persistent project state; no implicit reset on the next date.
-- Fsync + atomic JSON journal before every non-idempotent cbds operation.
-- After an ambiguous crash, stop in NEEDS_RECONCILIATION. Never redispatch blindly.
-- WAITING reports are inspected through cbds on a later timer tick; accepted succeeded reports become REVIEW_REQUIRED, not deployment approval.
-- Strict provider quota snapshot checks; stale, missing or unknown numbers fail closed.
-- Clean feature worktree check, per-project lock, bounded task text and private state permissions.
-- No merges, deployment, production database writes, physical device flash, model review, or auth/credential scraping.
+## Actual functionality
 
-## Unimplemented, intentionally
+- One direct headless worker process at a time: codex exec --json or agy -p --output-format json.
+- Up to max_tasks from an approved JSON backlog, respecting dependencies, per-task and campaign deadlines.
+- Dedicated linked Git worktree with exact nightshift/* branch, clean start and explicit approved:true.
+- Strict changed-path and forbidden-path checks (including untracked files), diff line budget, test-weakening guard, and host-run acceptance and project verification commands before **local commit**.
+- Atomic 0600 project state; fsync, advisory lock, no accidental dispatch after interrupted/failed state.
+- Static morning report listing completed commits, blocked work and future approved tasks.
+- No auto-merge, push, production DB, secrets, hardware flashing, arbitrary shell verification, or background command supervision.
 
-- Gemini Argon chat browser automation. Argon is an interactive web reviewer; it is not a CLI process.
-- A supported automatic provider quota collector.
-- Automatic recovery of ambiguous run/task/dispatch creation, automated ticket repair or independent Codex review.
-- Validated OpenClaw Herdr/cbds live integration or multi-project global capacity scheduling.
+### Deliberate limitation: no automatic destructive rollback
 
-Unit tests mock cbds and cannot prove its live JSON shape. The exact adapter must be checked against the installed cbds build, especially command envelope and report acceptance fields.
+If a worker fails, commits unexpectedly, times out, edits a forbidden path or fails tests, **STOP and preserve that isolated worktree for human inspection**. We deliberately rejected the proposed blanket git reset --hard/git clean -fd because it can destroy owner work or evidence. Only an owner-approved, path-limited recovery procedure should clean the worktree and mark the state ready for another run.
 
-## Safe first use on the OpenClaw host
+### CLI reality
 
-1. Complete V0.2 G4/G5 Herdr/cbds plugin and crash-recovery gates first. Preserve existing .cbds directories.
-2. Create a clean isolated feature worktree (never main/master).
-3. Copy config/nightshift.example.json to ~/.config/mk-nightshift/nutrisnap-pilot.json, with absolute paths to a separately approved bounded task and isolated worktree. Leave approved false.
-4. Supply a fresh quota snapshot from a verified trusted source; never fabricate numbers. Snapshot example:
+Codex and AGY support noninteractive execution, but exact command compatibility, account identity, sandbox nesting, authentication and quota policy **must be verified on the OpenClaw host**. JSON token fields are saved when exposed. A quota error currently BLOCKS; automatic account switching and preflight quota probing are not implemented. Worker logs may contain sensitive content and are private under the local state directory.
 
-    {
-      "checked_at": "2026-10-16T00:10:00+05:30",
-      "agents": {"gemini": {"authenticated": true, "remaining_percent": 70}}
-    }
+### Setup — NO job is enabled by this branch
 
-5. Confirm the Herdr agent kind actually launches the intended AGY profile. The example 'gemini' is not proof that agy-manickam or agy-rohit was selected.
-6. Run the following manually (none dispatch with approved false):
+1. Use a **separate disposable test repository** for Night 1. Ensure git worktree and tests pass with fake worker commands before granting coding work.
+2. Copy config/nightshift.example.json into ~/.config/mk-nightshift/ and create the backlog JSON with correct paths. Leave approved=false until the host pilot is reviewed.
+3. Create a dedicated feature worktree for the target project (not main/master/develop), e.g.:
 
-    python3 -m unittest discover -s tests -p 'test_nightshift.py' -v
-    cbds doctor --json
-    herdr plugin list --json
-    cbds skill status
-    python3 scripts/nightshift.py status --config ~/.config/mk-nightshift/nutrisnap-pilot.json
-    python3 scripts/nightshift.py doctor --config ~/.config/mk-nightshift/nutrisnap-pilot.json
+       git -C /absolute/repo worktree add -b nightshift/pilot /absolute/nightshift-worktrees/project-pilot <verified-source-ref>
 
-7. In a disposable test repo, verify actual JSON for cbds run create, task create --run, dispatch start, and report list; check accepted result and timeout paths. Do NOT activate automatically before this real integration experiment.
+4. Edit the project/backlog context_files and allowed_paths for the *current* version. Do not reuse stale AGENTS.md branch pointers without auditing them. Put every state/backlog path **outside the worktree**.
+5. Confirm that the same systemd user can invoke both CLIs without an interactive terminal:
 
-Only after host validation and explicit approval should approved become true.
+       codex exec --help
+       agy --help
+       python3 scripts/nightshift.py doctor --config /absolute/config.json
+       python3 scripts/nightshift.py status --config /absolute/config.json
 
-## Optional systemd user timer
+6. Run offline tests:
 
-    mkdir -p ~/.config/systemd/user
-    cp systemd/mk-nightshift@.* ~/.config/systemd/user/
-    systemctl --user daemon-reload
-    systemctl --user enable --now mk-nightshift@nutrisnap-pilot.timer
-    systemctl --user list-timers 'mk-nightshift*'
+       python3 -m unittest discover -s tests -p 'test_nightshift.py' -v
 
-Keep it disabled until the pilot passes. The host timezone must be Asia/Kolkata. The timer ticks every 15 minutes during hours 00–05; code enforces the narrower 00:15–05:15 window. Unfinished work stays in Herdr, not the oneshot service. This does not start new tasks every 15 minutes.
+7. Use real sandbox trials in a disposable Git repo before editing a real project. Only after approval, set approved=true and manually trigger a controlled run inside the planned window.
 
-## Recovery and approval gates
+       python3 scripts/nightshift.py run --config /absolute/config.json
+       python3 scripts/nightshift.py report --config /absolute/config.json
 
-If phase is NEEDS_RECONCILIATION, disable the timer and inspect cbds run/task/dispatch/report ledgers. Do not delete state.json to retry. WAITING preserves the existing dispatch. A succeeded cbds report is REVIEW_REQUIRED: exact-SHA independent reviewer, software tests, existing ticket ledger and human release approval are still mandatory.
+### Optional one-shot systemd user timer
 
-Argon review: paste the linked branch diff and test evidence into the existing Gemini chat. Request concrete bug findings with exact paths and regressions. Return findings as tickets for implementation; do not pretend its chat has an unattended CLI integration.
+Files systemd/mk-nightshift@.service and .timer run exactly once at **00:15 local system time**. Confirm the OS timezone is Asia/Kolkata (the Python runner independently verifies its IST window). The timer is NOT installed or enabled by this repository. Do not enable it until manual headless CLI, sandbox, user session/auth and real Git-worktree gates pass.
 
-## Next milestones
+       mkdir -p ~/.config/systemd/user
+       cp systemd/mk-nightshift@.* ~/.config/systemd/user/
+       systemctl --user daemon-reload
+       # ONLY after pilot approval:
+       systemctl --user enable --now mk-nightshift@nutrisnap-pilot.timer
 
-- Host integration tests for the actual cbds CLI schema and identity binding.
-- Secure automated quota snapshots (provider-supported, no scraping).
-- Verified crash recovery of interrupted cbds operations.
-- Capacity locks, approved ticket queue, independent review/test pipeline and morning Telegram digest.
-- Only then expand to multiple projects and claim a production night shift.
+Timer Persistent=false avoids starting overdue work after an unrelated daytime boot. The service has a 125-minute timeout; the Python campaign itself is capped at max_minutes <=120.
+
+### Safe project boundaries
+
+- NutriSnap: only an isolated DB; any production Prisma DB push, finance mutations, deployment and live Telegram sends forbidden.
+- MK Desk Pet: simulator/unit-test/firmware **compilation only**, never esptool flash or USB operations. Hardware validation stays manual.
+- Project instructions must reference the latest approved branch/version.
+- Worker model may still attempt undesirable commands; this runner is **not a security sandbox**. Use Codex sandbox/AGY permissions and a dedicated unprivileged Linux account with no production credentials or hardware access. A post-run path audit cannot undo external side effects.
+
+### Acceptance gate
+
+Offline unit tests use real temporary Git worktrees but **mock both coding CLIs**. They are not evidence of real Codex/AGY, subscription auth or OpenClaw/systemd reliability. Initial status remains HOLD until at least one real headless worker completes two approved fixture tasks and reports correctly, with a simulated interruption and manual recovery.
+
+The former Argon review includes two false positives: script never contained the reported stray "c" argument in cbds report calls, and STATES already included BLOCKED and NEEDS_RECONCILIATION. The larger sequential-runner simplification was justified.
+
+### Later only if the pilot delivers value
+
+Trusted quota sampling, optional profile fallback, automated artifact upload/Telegram notification, multiple project configuration files and backlog authoring support. No Paperclip, Gas Town, or separate dashboard.
