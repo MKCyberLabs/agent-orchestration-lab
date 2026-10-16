@@ -4,6 +4,24 @@ This branch implements a zero-LLM **orchestrator**: a deterministic Python runne
 
 It replaces Herdr/cbds in the *new* script; legacy experimentation files remain untouched.
 
+## Immediate on-host smoke (daytime, no timer)
+
+Run the following on the **OpenClaw server as the account authenticated to Codex CLI**.
+This uses a separate disposable source repository and linked nightshift worktree, so it does **not** change NutriSnap, MK Desk Pet, existing orchestration worktrees, or the morning-sync script.
+
+    mkdir -p "$HOME/.local/state"
+    CHECKOUT="$(mktemp -d "$HOME/.local/state/v04-checkout.XXXXXXXX")"
+    git clone --quiet --depth 1 --branch feature/v0.4-nightshift-pilot \
+      https://github.com/MKCyberLabs/agent-orchestration-lab.git "$CHECKOUT"
+    cd "$CHECKOUT"
+    bash scripts/openclaw-v04-smoke.sh codex
+
+The script sets a **daytime-only, fixture-scoped approval** and a 35-minute campaign ceiling; it attempts two narrowly scoped Python functions. It does not install/enable cron or systemd. Codex must already be installed and authenticated non-interactively. A live run uses your Codex subscription quota. Use 'agy' as the argument only after independent AGY headless permissions/auth verification.
+
+Expected evidence: TEST_ADD and TEST_LABEL each have VERIFIED_COMMITTED in the generated report, two local commits exist on nightshift/fixture, and 'REVIEW_REQUIRED' appears. If any stage fails, stop and bring back the error, state.json, and a redacted excerpt of the worker stderr. Do not paste credential files or full private logs. Failed edits and fixture directories are retained for diagnosis.
+
+The GitHub Actions 'test_openclaw_smoke.py' uses a **fake** Codex binary and costs zero tokens. Passing that test is necessary but not a substitute for running the command above on OpenClaw with the actual authenticated CLI.
+
 ## Actual functionality
 
 - One direct headless worker process at a time: codex exec --json or agy -p --output-format json.
