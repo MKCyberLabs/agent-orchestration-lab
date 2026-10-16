@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "project_id": "nutrisnap-pilot",
+  "worktree": "/home/openclaw/nightshift-worktrees/nutrisnap-pilot",
+  "backlog_file": "/home/openclaw/.config/mk-nightshift/backlogs/nutrisnap-pilot.json",
+  "state_dir": "/home/openclaw/.local/state/mk-nightshift",
+  "timezone": "Asia/Kolkata",
+  "start": "00:15",
+  "stop": "02:15",
+  "approved": false,
+  "worker": "codex",
+  "branch": "nightshift/pilot",
+  "max_minutes": 90,
+  "task_minutes": 20,
+  "max_tasks": 4,
+  "verify_commands": [
+    [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    [
+      "npm",
+      "run",
+      "test:analysis-contract"
+    ]
+  ]
+}

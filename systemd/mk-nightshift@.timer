@@ -1,0 +1,10 @@
+[Unit]
+Description=MKCyberLabs single nightly coding trigger %i
+
+[Timer]
+OnCalendar=*-*-* 00:15:00
+Persistent=false
+Unit=mk-nightshift@%i.service
+
+[Install]
+WantedBy=timers.target
