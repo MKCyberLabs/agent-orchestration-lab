@@ -7,6 +7,8 @@ on:
     paths:
       - 'scripts/nightshift.py'
       - 'tests/test_nightshift.py'
+      - 'tests/test_openclaw_smoke.py'
+      - 'scripts/openclaw-v04-smoke.sh'
       - 'config/nightshift.example.json'
       - 'config/backlog.example.json'
       - 'systemd/mk-nightshift@.*'
@@ -15,6 +17,8 @@ on:
     paths:
       - 'scripts/nightshift.py'
       - 'tests/test_nightshift.py'
+      - 'tests/test_openclaw_smoke.py'
+      - 'scripts/openclaw-v04-smoke.sh'
       - 'config/nightshift.example.json'
       - 'config/backlog.example.json'
       - 'systemd/mk-nightshift@.*'
@@ -34,6 +38,10 @@ jobs:
           python-version: '3.11'
       - name: Real Git-worktree behavioral tests (mocked coding CLIs)
         run: python3 -m unittest discover -s tests -p 'test_nightshift.py' -v
+      - name: Disposable host-style smoke test with fake Codex (zero tokens)
+        run: python3 -m unittest discover -s tests -p 'test_openclaw_smoke.py' -v
+      - name: Bash syntax check
+        run: bash -n scripts/openclaw-v04-smoke.sh
       - name: Syntax check and example validation
         run: |
           python3 -m py_compile scripts/nightshift.py
