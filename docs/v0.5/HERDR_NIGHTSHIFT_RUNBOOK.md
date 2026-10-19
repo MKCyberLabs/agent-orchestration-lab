@@ -2,7 +2,7 @@
 
 **Purpose:** A dedicated instruction file for the existing OpenClaw **development** setup. Prove one Python → Herdr → AGY-Rohit task, handle red human-attention prompts, verify tests and local Git, and **stop without endless troubleshooting**. Not a general Herdr manual.
 
-**Authorization:** Reading this runbook does **not** authorize another detector reload, model prompt, folder trust, new seat, Git push or timer. A previous one-refresh/one-override authorization was exhausted.
+**Authorization status (updated 2026-10-19):** Reading this runbook alone never authorizes a live change. The owner has now separately authorized exactly **one corrected numeric-version override, one hot reload and conditional completion of the single previously unsent H3 prompt**. See `docs/v0.5/approvals/H3_R2_NUMERIC_VERSION_ONE_RELOAD_2026-10-19.md`. The prior refresh/reload allowance was consumed. No new trust, retry, push or timer.
 
 ## 1. Exact project status — keep checkmarks
 
@@ -94,7 +94,7 @@ The active server's `agent explain` and `server agent-manifests` after a hot rel
 
 ## 5. H3 corrected happy flow — one precise controlled attempt
 
-The last owner approval was exhausted. **Wait for a NEW explicit owner approval** for **one corrected numeric-version override + one hot reload** before modifying the live Herdr manifest. The owner can optionally authorize continuation of the *still unused* one H3 AGY-Rohit prompt after a trustworthy matched state appears.
+The first owner approval was exhausted. **A NEW, separate owner approval is now recorded** for **one corrected numeric-version override + one hot reload**, and conditional completion of the *still unused* H3 AGY-Rohit prompt after a trustworthy matched safe-idle/blocked distinction is verified. Check the exact receipt above. No further retries are authorized.
 
 1. **REUSE:** Existing `wD:p1`, `wD:p4`, `wD:p5` only. Verify local commit `28039ed9848cccf91ab0dbe56fc54e4ec2ed339b` or clean descendant. Read saved H3 recovery evidence. Do not repeat previous upstream refresh or another model/login check.
 2. **PIN THE FAILING LAYER:** Use installed Herdr help, `agent explain`, bottom screen and manifest status; identify actual agent-kind/id and precise rejected `version` error. Do not modify Python adapter for a Herdr schema failure.
