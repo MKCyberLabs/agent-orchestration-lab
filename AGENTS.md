@@ -1,3 +1,5 @@
+> **V0.5 P0 planning scope (only when explicitly following `prompts/V0.5_P0_MASTER_PROMPT.md`):** Read `docs/v0.5/START_HERE.md` and `docs/v0.5/P0_CHECKLIST.md` before the older multi-agent workflow below. Execute **P0.1 read-only inventory only**, with no worker/session dispatch, source edits, tests, timers, or progress to P0.2 without owner approval. V0.5's Python Nightshift and historical Herdr/cbds must not become two live task authorities. Outside this P0 planning task, existing safety rules remain unchanged.
+
 # Agent Operating Rules
 
 These rules apply to Codex, agy-manickam, agy-rohit, and any future worker used in this lab.
