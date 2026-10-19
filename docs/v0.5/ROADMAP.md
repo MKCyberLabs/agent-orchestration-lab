@@ -15,19 +15,22 @@ This scoreboard is the short status summary. Historic phase descriptions below a
 | W02 — exact 330 ml input implemented, local code committed | ✅ **DONE (implementation)** | NutriSnap `ee135be8173eea5ad499b23838e0a049c814e991` → local `e072c80cc50b5a5fe9a199d2b93b4059807331ba`; evidence `bb2c84a63197038734c9fe14297f203197c44093` |
 | W02 — offline component / validator tests | ✅ **DONE** | PASS per OpenClaw W02 result; broader project typecheck FAILED with reported unchanged baseline diagnostics (not evidence of a W02-introduced regression) |
 | W02 — browser reload, Water/Today totals and cross-user DB UAT | ☐ **PENDING — product acceptance lane** | No verified isolated disposable database; tests correctly `NOT_RUN` |
-| Nightshift — unattended one-time no-push trigger and recovery | ☐ **NEXT — automation lane, requires owner authorization** | Only manual runs proven. No timer installed or night automation activated |
+| Herdr — visible real AGY/Codex seats and handoffs | ☐ **NEXT PRIORITY — seats lane** | Existing Herdr pane worked, but headless Nightshift processes are NOT yet live named Herdr seats. Next test one real recognized CLI seat, then Python↔Herdr handoff. [Seat MVP](../../prompts/V0.5_HERDR_SEATS_MVP.md) |
+| Nightshift — unattended one-time no-push trigger and recovery | ☐ **AFTER SEAT PROOF — automation lane** | Manual runs proven. No timer installed or night automation activated |
 | GitHub push, auto-merge, deployment, sensitive environment hardening | ⏸ **HOLD / LATER** | `PUSH_HOLD` persists; 6 AM merge scheduler context unverified; no production changes authorized |
 
 **Meaning of DONE:** A completed scope stays checked. The **Nightshift manual build → host tests → local Git commit → report loop is demonstrated** on both a disposable fixture and a real W02 code task. The **full W02 product behavior is not accepted** until isolated DB/browser UAT; it is a **separate product lane**, not grounds to re-open the worker-launch milestone.
 
 **Source qualification:** These detailed process receipts, Git SHA results and test outcomes were supplied from OpenClaw by the owner. The remote instruction-branch reviewer cannot independently fetch OpenClaw-only commits/logs while `PUSH_HOLD` is active. Preserve this distinction without reopening redundant verification.
 
-### Next outcomes — only two tracks
+### Next outcomes — ordered tracks (not extra planning phases)
 
-1. **Nightshift automation lane:** One bounded unattended/deferred **no-push, no-merge** development run, after explicit owner authorization for its trigger. Record scheduling/actual invocation, completion or single failure, state, commit and report; no large new coordinator architecture.
-2. **NutriSnap product lane:** One isolated disposable DB + browser UAT for existing W02 code, without launching another coding agent unless a defect is found. If isolated DB unavailable, report that precise blocker instead of substituting production data.
+1. **Finish NutriSnap W02 product UAT:** using [focused UAT instruction](../../prompts/V0.5_W02_ISOLATED_DB_BROWSER_UAT.md), run one disposable PostgreSQL + real browser test (entry, persistence, reload, Water/Today totals, cross-user denial). Close the W02 UAT checkbox only with observed results. This does NOT reopen completed W02 implementation or Python worker milestones.
+2. **Herdr + real seats: next main Nightshift milestone:** use [minimal Herdr seat milestone](../../prompts/V0.5_HERDR_SEATS_MVP.md). Reuse current Herdr instance, visible operator/log/build/review panes, verify a **real** AGY-Rohit builder CLI seat and AGY-Manickam separately, plus Codex reviewer. A named tab is not an authenticated seat. Python remains sole dispatch/commit authority; one separately approved Herdr-visible work handoff must actually finish to check the seat milestone. Do not demand a new OS user or new agent framework.
+3. **Unattended operation:** one approved time-bounded **no-push, no-merge** task starts without an operator prompt, recovers/stops safely, and produces morning report. Only then consider a daily timer, with clear owner approval and 6 AM Git scheduler safety.
+4. **Release / expansion:** owner reviews and promotes local changes; only later broaden to two builders/two projects, production, push/merge and environment hardening.
 
-**Working rule:** No new account, Herdr window, identity review, sandbox platform, AGY multi-agent test or security-architecture project as a prerequisite to acknowledging the already completed manual single-Codex loop. Keep security hardening in future roadmap before handling sensitive apps at scale.
+**Working rule:** Keep checkmarks for completed manual worker/W02 implementation. Each follow-up phase should produce one visible running capability, not another broad security/architecture dossier. Stronger isolation and production push safety are deferred; they are not silently considered solved.
 
 
 ## Owner update — 2026-10-19: DEV-FIRST MVP (applies to one disposable P1A fixture)
