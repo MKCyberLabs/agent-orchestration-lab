@@ -4,8 +4,8 @@ Date: 2026-10-19. **Planning documents committed only on `planning/v0.5-p0-hando
 
 | Step | State | Evidence / next gate |
 |---|---|---|
-| P0.1 host inventory | NOT_STARTED | Codex High, **read-only**, report for owner |
-| P0.2 authority ADR | PROPOSED | Owner reviews P0.1 first |
+| P0.1 host inventory | **PASS_FOR_P0_PLANNING — OWNER ACCEPTED** | [Preserved evidence](evidence/P0.1_INVENTORY_2026-10-19.md); operational readiness still HOLD |
+| P0.2 authority ADR | **AUTHORIZED — DOCUMENTATION ONLY / IN PROGRESS** | [Codex master prompt](../../prompts/V0.5_P02_ADR_MASTER_PROMPT.md); [output contract](P02_ADR_OUTPUT_CONTRACT.md). ADR requires separate owner decision |
 | P0.3 NutriSnap context correction | PROPOSED | Separate owner approval and pinned NutriSnap branch |
 | P0.4 project source map | PROPOSED | Actual source/paths must be verified |
 | P0.5 trust and evidence | PROPOSED | Show worker vs host verification distinction |
@@ -28,7 +28,7 @@ Date: 2026-10-19. **Planning documents committed only on `planning/v0.5-p0-hando
 
 1. A user asked AGY-Rohit to call AGY-Manickam, and observed it creating an internal agent. **Outcome:** add externally verifiable launch receipt; never accept nested substitution.
 2. NutriSnap `main:AGENTS.md` contains historical v0.1 workflow pointers despite later branches existing. **Outcome:** validate current branch and create a small map, not another giant startup prompt.
-3. V0.4 ended a fixture run with `REVIEW_REQUIRED`; **two `VERIFIED_COMMITTED` task receipts still must be checked** before calling it pass.
+3. P0.1 checked **four historical `VERIFIED_COMMITTED` fixture task receipts** (two Codex, two AGY). They support the historical fixture outcome **only**, not headless profile selection, 24×7 readiness, unattended recovery or release.
 4. Earlier coordination spent tokens polling terminals and expanding the control plane. **Outcome:** deterministic waits and scarce model wake-ups, without switching frameworks mid-milestone.
 5. Verification paperwork can outgrow delivery. **Outcome:** acceptance evidence matters only if it protects useful completion.
 
@@ -41,4 +41,4 @@ Date: 2026-10-19. **Planning documents committed only on `planning/v0.5-p0-hando
 
 ## First handoff
 
-Codex High should read `prompts/V0.5_P0_MASTER_PROMPT.md` and perform **P0.1 only**. After receiving its read-only report, the owner decides whether to authorize P0.2.
+P0.1 is complete and its report is preserved at `docs/v0.5/evidence/P0.1_INVENTORY_2026-10-19.md`. The owner authorized **P0.2 only** as a docs/ADR inspection and Git evidence task. Codex High should read `prompts/V0.5_P02_ADR_MASTER_PROMPT.md`, write/commit planning documents in a separate isolated branch, and STOP for owner approval before P0.3.
