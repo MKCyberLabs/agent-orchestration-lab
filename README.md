@@ -1,4 +1,4 @@
-> **V0.5 planning handoff:** Start at [docs/v0.5/START_HERE.md](docs/v0.5/START_HERE.md). The [roadmap](docs/v0.5/ROADMAP.md), [P0 checklist](docs/v0.5/P0_CHECKLIST.md), [knowledge map](docs/v0.5/KNOWLEDGE_MAP.md), [status](docs/v0.5/STATUS_AND_DECISIONS.md) and [Codex High P0.1 prompt](prompts/V0.5_P0_MASTER_PROMPT.md) are documentation-only. **Only read-only P0.1 is authorized; no Nightshift/session/timer activation.**
+> **V0.5 planning handoff:** Start at [docs/v0.5/START_HERE.md](docs/v0.5/START_HERE.md). The [roadmap](docs/v0.5/ROADMAP.md), [P0 checklist](docs/v0.5/P0_CHECKLIST.md), [knowledge map](docs/v0.5/KNOWLEDGE_MAP.md), [status](docs/v0.5/STATUS_AND_DECISIONS.md) and [Codex High P0.1 prompt](prompts/V0.5_P0_MASTER_PROMPT.md) are documentation-only. **P0.1 inventory passed for planning; P0.2 documentation-only ADR is now authorized.** See [P0.2 prompt](prompts/V0.5_P02_ADR_MASTER_PROMPT.md). No Nightshift/session/timer activation.
 
 # Agent Orchestration Lab
 
