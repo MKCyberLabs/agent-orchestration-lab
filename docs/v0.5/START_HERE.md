@@ -13,7 +13,8 @@ Make one approved NutriSnap task run at night on the **intended authenticated CL
 3. [P0_CHECKLIST.md](P0_CHECKLIST.md) — exactly what P0.1–P0.6 must inspect and how each result is proven.
 4. [KNOWLEDGE_MAP.md](KNOWLEDGE_MAP.md) — known locations, authority, stale-pointer warnings.
 5. [STATUS_AND_DECISIONS.md](STATUS_AND_DECISIONS.md) — approvals, decisions and evidence ledger.
-6. [P0 master prompt](../../prompts/V0.5_P0_MASTER_PROMPT.md) — **begin with P0.1 only**.
+6. [P0.1 evidence](evidence/P0.1_INVENTORY_2026-10-19.md) — completed host inventory, actual findings and blockers.
+7. [P0.2 master prompt](../../prompts/V0.5_P02_ADR_MASTER_PROMPT.md) — **current step: documentation-only authority ADR**.
 
 ## Current implementation reality
 
@@ -37,7 +38,7 @@ Make one approved NutriSnap task run at night on the **intended authenticated CL
 
 For **each individual checklist item**, follow `Observe → Specify → Owner reviews → Implement (only when approved) → Verify → Record lesson`.
 
-**Stop after P0.1.** Show the owner the evidence, unknowns, and proposed P0.2 scope; do not self-approve P0.2–P3.
+**P0.1 is accepted. Stop after P0.2 documentation and Git handoff.** Show the owner the proposed ADR, evidence, risks and next P0.3 scope; never self-approve P0.3–P3.
 
 ## Named deliverables
 
