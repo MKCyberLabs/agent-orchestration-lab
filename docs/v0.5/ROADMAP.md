@@ -8,7 +8,7 @@ In the evening the owner approves one or two bounded issues. Overnight a verifie
 
 ## Dependency graph
 
-\`\`\`mermaid
+```mermaid
 flowchart TD
   A["V0.5 P0 — Discover truth"] --> B["P1 — Seat / account integrity"]
   B --> C["P2 — Task contracts and knowledge"]
@@ -21,17 +21,17 @@ flowchart TD
   H --> I["V0.8 — Risk-based SDLC skills"]
   I --> J["V0.9 — Two workers / two projects"]
   J --> K["V1.0 — Reliable nightly outcomes"]
-\`\`\`
+```
 
 ## V0.5 — Four gated phases
 
 ### P0: Verify truth and make project knowledge navigable (NO code edits in P0.1)
 - **P0.1** Read-only inventory: orchestrator branch/HEAD/status, V0.4 runner/smoke/tests/timer, CLI help and auth viability (without exposing secrets), Herdr/cbds installed facts, existing host fixture evidence; NutriSnap branch pointers and conflicting docs.
 - **P0.2** Architecture decision record: Python JSON runner is sole authoritative *night* dispatcher in V0.5; Herdr used for interactive control, cbds not dual-writing campaign state. Specify any proposed changes; no runtime edits yet.
-- **P0.3** Propose a shallow NutriSnap \`AGENTS.md\` entrypoint to existing authoritative docs. Do not overwrite the NutriSnap repository without separate owner approval.
+- **P0.3** Propose a shallow NutriSnap `AGENTS.md` entrypoint to existing authoritative docs. Do not overwrite the NutriSnap repository without separate owner approval.
 - **P0.4** Source-address map: app frontend/API, Prisma, shared scheduler, Python analysis API, Telegram adapter, isolated test setup, build/test commands. Each entry says verified/unverified.
 - **P0.5** Evidence hierarchy: Git SHA + commands + logs for implementation, owner decisions for requirements, cbds or runner state for execution *only in the active chosen architecture*. No model narrative accepted as proof.
-- **P0.6** Identify genuine blockers: verify both actual V0.4 smoke tasks \`VERIFIED_COMMITTED\` (not just \`REVIEW_REQUIRED\`), interruption recovery, account/profile, quotas, timer state, full real-project readiness.
+- **P0.6** Identify genuine blockers: verify both actual V0.4 smoke tasks `VERIFIED_COMMITTED` (not just `REVIEW_REQUIRED`), interruption recovery, account/profile, quotas, timer state, full real-project readiness.
 - **P0 exit:** a fresh agent can locate the correct NutriSnap branch/SHA, reminders code, tests, non-goals and next approved issue in no more than two short entrypoint reads plus targeted links. Contradiction = HOLD.
 
 ### P1: Identity, chairs and handoffs
