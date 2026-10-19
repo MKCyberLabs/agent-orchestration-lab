@@ -1,6 +1,34 @@
 # MK Nightshift — phased roadmap
 
-Planning baseline: 2026-10-19. Status: PROPOSED. Implement **nothing** merely because it appears here.
+Planning baseline: 2026-10-19. **Current status: MANUAL SINGLE-CODEX DEVELOPMENT LOOP PROVEN (per OpenClaw execution receipts); UNATTENDED NIGHTSHIFT NOT YET APPROVED.** Later roadmap items remain proposals, not implementation permission.
+
+## ✅ Progress scoreboard — owner review, 2026-10-19
+
+This scoreboard is the short status summary. Historic phase descriptions below are future-oriented; **do not reset checked milestones** because an older plan mentions more ambitious tests.
+
+| Outcome | Check | Evidence / scope |
+|---|---|---|
+| P0 — source, task contract, runner choice | ✅ **DONE** | Local planning/report commits reviewed via user-provided host reports; Python is sole task dispatcher |
+| P1A — real Codex CLI launched by Python | ✅ **DONE** | One `TEST_ADD` real headless execution and host assertions PASS; fixture `06c84ae2bc1788c8c42046ad13b8de08cb387b97` |
+| P1A — real worker logs/test/commit/stop | ✅ **DONE** | Evidence commit `2f772d8eb691f81abeabf4ff22f25aeb5730fd4d`; no retry or push |
+| W02 — one real NutriSnap coding task through Python runner | ✅ **DONE** | Native Codex child PID 188615, launcher PID 188608; JSON `turn.completed`; runner exit 0; `W02_330ML=VERIFIED_COMMITTED` and campaign `REVIEW_REQUIRED` |
+| W02 — exact 330 ml input implemented, local code committed | ✅ **DONE (implementation)** | NutriSnap `ee135be8173eea5ad499b23838e0a049c814e991` → local `e072c80cc50b5a5fe9a199d2b93b4059807331ba`; evidence `bb2c84a63197038734c9fe14297f203197c44093` |
+| W02 — offline component / validator tests | ✅ **DONE** | PASS per OpenClaw W02 result; broader project typecheck FAILED with reported unchanged baseline diagnostics (not evidence of a W02-introduced regression) |
+| W02 — browser reload, Water/Today totals and cross-user DB UAT | ☐ **PENDING — product acceptance lane** | No verified isolated disposable database; tests correctly `NOT_RUN` |
+| Nightshift — unattended one-time no-push trigger and recovery | ☐ **NEXT — automation lane, requires owner authorization** | Only manual runs proven. No timer installed or night automation activated |
+| GitHub push, auto-merge, deployment, sensitive environment hardening | ⏸ **HOLD / LATER** | `PUSH_HOLD` persists; 6 AM merge scheduler context unverified; no production changes authorized |
+
+**Meaning of DONE:** A completed scope stays checked. The **Nightshift manual build → host tests → local Git commit → report loop is demonstrated** on both a disposable fixture and a real W02 code task. The **full W02 product behavior is not accepted** until isolated DB/browser UAT; it is a **separate product lane**, not grounds to re-open the worker-launch milestone.
+
+**Source qualification:** These detailed process receipts, Git SHA results and test outcomes were supplied from OpenClaw by the owner. The remote instruction-branch reviewer cannot independently fetch OpenClaw-only commits/logs while `PUSH_HOLD` is active. Preserve this distinction without reopening redundant verification.
+
+### Next outcomes — only two tracks
+
+1. **Nightshift automation lane:** One bounded unattended/deferred **no-push, no-merge** development run, after explicit owner authorization for its trigger. Record scheduling/actual invocation, completion or single failure, state, commit and report; no large new coordinator architecture.
+2. **NutriSnap product lane:** One isolated disposable DB + browser UAT for existing W02 code, without launching another coding agent unless a defect is found. If isolated DB unavailable, report that precise blocker instead of substituting production data.
+
+**Working rule:** No new account, Herdr window, identity review, sandbox platform, AGY multi-agent test or security-architecture project as a prerequisite to acknowledging the already completed manual single-Codex loop. Keep security hardening in future roadmap before handling sensitive apps at scale.
+
 
 ## Owner update — 2026-10-19: DEV-FIRST MVP (applies to one disposable P1A fixture)
 
