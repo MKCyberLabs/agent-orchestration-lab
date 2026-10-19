@@ -22,8 +22,8 @@ https://herdr.dev/docs/agents/
 | Explain detection / false-idle fallback | `herdr agent explain wD:p4 --json` |
 | Read current UI / approval prompt | `herdr agent read wD:p4 --source detection --lines 60` |
 | Read readable recent transcript | `herdr agent read wD:p4 --source recent-unwrapped --lines 90` |
-| Submit **one** approved prompt and wait boundedly | `herdr agent prompt wD:p4 "ONE_APPROVED_TASK_TEXT" --wait --until idle --until done --until blocked --timeout 180000` |
-| Observe a live agent without submitting anything | `herdr agent wait wD:p4 --until idle --until done --until blocked --timeout 180000` |
+| Submit **one** approved prompt and wait boundedly | `herdr agent prompt wD:p4 "ONE_APPROVED_TASK_TEXT" --wait --until idle --until done --until blocked --timeout 900000` |
+| Observe a live agent without submitting anything | `herdr agent wait wD:p4 --until idle --until done --until blocked --timeout 900000` |
 | Read Nightshift task state (plain shell) | `herdr pane run wD:p5 "python3 -m json.tool /absolute/path/to/state.json"` (only if operator permits; avoid raw secrets) |
 
 **No** `agent send-keys ... enter` for owner/trust approvals in unattended code. Owner must inspect the exact visible dialog and approve separately. `herdr agent prompt` rejects a presently `blocked` agent with `agent_blocked` and does not send input. `--until` only works with `--wait`. Waiting without `--timeout` can hang indefinitely.
