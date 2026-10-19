@@ -1,6 +1,6 @@
 # V0.5 P0 — Six reviewable steps (STOP between steps)
 
-Status: PROPOSED. The owner currently authorizes **P0.1 read-only observation only** by Codex High. Do not infer authority for P0.2–P3 from this document.
+Status: P0.1 completed as PASS_FOR_P0_PLANNING and owner accepted. **P0.2 is authorized as documentation-only ADR inspection and Git evidence recording**, following `prompts/V0.5_P02_ADR_MASTER_PROMPT.md`. P0.3–P3 remain unauthorized.
 
 ## Evidence conventions
 
@@ -8,7 +8,7 @@ For each claim: mark **VERIFIED** (command + full SHA + output path), **OBSERVED
 
 Target host workspace is expected at `/home/openclaw/agent-orchestration-lab` but **verify it exists**; the worktree used for this plan may live elsewhere. Never silently switch branches in a dirty or running Herdr workspace.
 
-### P0.1 — Read-only inventory [AUTHORIZED to inspect, NOT to edit]
+### P0.1 — Read-only inventory [COMPLETED; evidence preserved in `evidence/P0.1_INVENTORY_2026-10-19.md`]
 
 **Question:** What is really deployed/installed, which Git objects and documentation are active, and what happened in the previous fixture trial?
 
@@ -34,11 +34,12 @@ Inspection items:
 
 **Approval checkpoint:** Show owner the above before any P0.2 action.
 
-### P0.2 — Resolve competing orchestration state [NOT AUTHORIZED]
+### P0.2 — Resolve competing orchestration state [AUTHORIZED: inspect and commit planning documents only]
 - Confirm separate lifecycle of `nightshift.py` JSON and historic Herdr/cbds runs.
 - Draft one-page ADR selecting **exactly one** night dispatcher/state authority for V0.5. Proposed: Python JSON runner; Herdr is only operator UI.
 - Identify 6 AM merge-safety interaction and approval boundaries.
-- Exit: no double-dispatch scenario, owner accepts ADR; otherwise HOLD.
+- Output: `ADR_0001_SINGLE_CONTROL_PLANE.md`, `evidence/P0.2_ADR_REVIEW_2026-10-19.md`, and accurate `STATUS_AND_DECISIONS.md`; see [P0.2 output contract](P02_ADR_OUTPUT_CONTRACT.md). The ADR is PROPOSED until the owner explicitly accepts it.
+- Exit for this bounded task: documentation complete, sources/unknowns recorded, safe Git commit; STOP for owner approval before P0.3. No runtime changes.
 
 ### P0.3 — NutriSnap entrypoint / stale-context repair [NOT AUTHORIZED]
 - Identify real current NutriSnap branch/SHA and relevant already-existing docs.
