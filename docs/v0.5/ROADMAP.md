@@ -10,6 +10,15 @@ Planning baseline: 2026-10-19. **Updated 2026-10-20: Manual Codex and AGY-Rohit 
 
 **What's proved:** existing manual Python→Herdr H3 and offline H4 integrations remain ✅. **What's not:** H5 Manickam trust acceptance/readiness result unreported; Rohit seat shell-only last observed; no simultaneous lead+builder+tester happy-flow trial yet. **Next measurable deliverable:** one approved task completed through real lead→builder→independent tester→local night branch→report. Do not divert into additional Python seat-manager work.
 
+## V0.5 finish line — 2026-10-20 (NO MORE H-PHASES)
+
+- ✅ **NS-01 NutriSnap actual AGY build + independent Codex QA PASS (owner-reported):** local NutriSnap code `0ff42c6a28d203e3ccaf9cc37fba2ae693ddeb2d`, **22 food tests, typecheck, 1,440 valid/35 malformed cases PASS**, 1 Manickam startup/1 coding prompt/0 repairs; 2 approved source files, single exact folder trust; clean unmerged isolated worktree; original dirty checkout untouched. Host `morning.md` under `/home/openclaw/.local/state/mk-nightshift/pilots/2026-10-20-ns01/`. No push, merge, deploy or schedule.
+- ☐ **Gate A — Codex High runs a complete one-instruction task** (one modest **NS-02** NutriSnap fix), delegates to the existing Manickam Herdr seat, independently tests, makes local commit and returns owner-ready report **with no further routine human steps**. Reuse already trusted NS-01 worktree/branch; no new layout. [Exact owner-facing NS-02 prompt](../../prompts/V0.5_CODEX_FIRST_HANDSOFF_AND_PYTHON_CLOSE_2026-10-20.md).
+- ☐ **Gate B — only after Gate A PASS, one minimal Python/OS one-shot launcher** to start the already-working AI-led run, enforce one-run/timeout, save logs and verify a real report. Python does **not** delegate tasks or judge code. Requires its own bounded owner approval before implementation.
+- ☐ **Gate C — V0.5 acceptance:** one real launcher-triggered task → AGY commit → independent Codex QA → morning report, 0 automatic pushes/merges/deploys. No recurring timer in V0.5 acceptance; separately enable schedule if owner approves after PASS.
+
+**Architectural guardrail:** Agent-led Herdr-only, no CBDS, no Python orchestration rewrite and no per-task workspace. Preserve existing completed H3/H4 proofs but prioritize the **two measurable execution gates** above over further setup.
+
 ## ✅ Progress scoreboard — owner review, 2026-10-19
 
 This scoreboard is the short status summary. Historic phase descriptions below are future-oriented; **do not reset checked milestones** because an older plan mentions more ambitious tests.
