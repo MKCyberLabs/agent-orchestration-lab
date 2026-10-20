@@ -2,6 +2,12 @@
 
 Planning baseline: 2026-10-19. **Updated 2026-10-20: Manual Codex and AGY-Rohit H3 PASS; H4 Python↔Herdr integration 60 offline checks PASS (owner-reported). H5 roles NEXT; live seat readiness and unattended Nightshift NOT VERIFIED.** Later roadmap items remain proposals, not implementation permission.
 
+## Architecture closed — Argon 4 review, 2026-10-20
+
+✅ **DECIDED: deterministic Python + Herdr CLI; no AI Seat Creator.** Use one reusable Herdr seat and **one stable dedicated task worktree path per builder** with sequential `nightshift/<task_id>` branches; no new window/directory per task. Never use the existing orchestration planning/evidence worktree for automatic branch switching. Owner trusts a genuinely new builder directory once; Python never auto-approves. [Full decision and 3-outcome happy flow](DECISION_ARGON_HAPPY_FLOW_2026-10-20.md).
+
+**Next measured outcome:** finish already-approved H5 Manickam `wD:p2` trust/readiness verification (still no completion receipt), then *separately authorize* one small Python seat-reuse/clean-branch implementation with offline tests and **two bounded sequential pilot tasks**. No new AI agent/planning round, push or nightly schedule. H5/H3/H4 checkmarks remain as they were, and no new task execution is implied by this decision.
+
 ## ✅ Progress scoreboard — owner review, 2026-10-19
 
 This scoreboard is the short status summary. Historic phase descriptions below are future-oriented; **do not reset checked milestones** because an older plan mentions more ambitious tests.
