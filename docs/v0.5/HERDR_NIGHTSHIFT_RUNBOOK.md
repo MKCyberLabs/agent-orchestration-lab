@@ -4,6 +4,14 @@
 
 **Status update (2026-10-20):** **H3 manual PASS** (owner-reported). The corrected detector version `2026.10.19.2` loaded, exactly one AGY-Rohit prompt was sent, the transient survey hold was preserved, and host-only acceptance passed. **The earlier one-reload/one-prompt approval has been USED.** Sections describing H3 corrected recovery below are now *historical troubleshooting reference*, **NOT permission to run or repeat them**. Next: separately approve [H4 offline integration](../../prompts/V0.5_H4_INTEGRATE_PROVEN_HERDR_PATH.md). No new agent/task, push, approval automation or timer.
 
+## H4 outcome and next-seat recovery — 2026-10-20
+
+**H4 OFFLINE INTEGRATION PASS (owner-reported):** 49 integration + 11 detector checks passed; maintained Python Nightshift integrates the tested Herdr helper, survey/trust attention holds and configured existing-seat routing. Source `005b596581128925d11c0ab53e20fda6e1f44d5b`, evidence `43964c3179a1951353929d563b403497917ebcb5`. **Do not rerun H4** because the previous instruction still exists.
+
+**New operational lesson:** Historic AGY/Codex PIDs and pane IDs from the H3 session were not present in the H4 environment. A previous named-pane mapping is a *cached hint*, not proof of a live process. On the next authorized seat step, Python/operator must read the **current Herdr server session, workspace, agent list and actual process**, then reconcile role→pane IDs. If Herdr is unavailable, report a concrete blocker—do not silently launch a duplicate agent/server or claim current readiness. Herdr IDs are local to a specific server; role identity/profile must be grounded separately.
+
+**H5 next:** `prompts/V0.5_H5_SECOND_SEAT_ROLE_PARITY.md` (owner authorization required for a new AGY-Manickam startup). H5 has **zero coding prompts**, no timer, no auto-trust; Python stays sole task-state authority. Only after live seat mapping is real should a separately approved one-time unattended no-push task proceed.
+
 ## 1. Exact project status — keep checkmarks
 
 | Milestone | Actual state |
