@@ -2,11 +2,13 @@
 
 Planning baseline: 2026-10-19. **Updated 2026-10-20: Manual Codex and AGY-Rohit H3 PASS; H4 Python↔Herdr integration 60 offline checks PASS (owner-reported). H5 roles NEXT; live seat readiness and unattended Nightshift NOT VERIFIED.** Later roadmap items remain proposals, not implementation permission.
 
-## Architecture closed — Argon 4 review, 2026-10-20
+## CURRENT direction — owner-corrected, agent-led Nightshift (2026-10-20)
 
-✅ **DECIDED: deterministic Python + Herdr CLI; no AI Seat Creator.** Use one reusable Herdr seat and **one stable dedicated task worktree path per builder** with sequential `nightshift/<task_id>` branches; no new window/directory per task. Never use the existing orchestration planning/evidence worktree for automatic branch switching. Owner trusts a genuinely new builder directory once; Python never auto-approves. [Full decision and 3-outcome happy flow](DECISION_ARGON_HAPPY_FLOW_2026-10-20.md).
+**DECIDED: AI team lead, not Python, coordinates work.** [Final decision: agent-led Nightshift](DECISION_AGENT_LED_NIGHTSHIFT_2026-10-20.md) supersedes the Python-owned seat-workflow proposal from Argon's earlier review. Roles: **AGY-Manickam (candidate lead) → AGY-Rohit (builder) → independent Codex High (tester/reviewer)**, subject to actual seat/profile/quota verification. Owner approves 1–2 tasks and **merges only after morning review**.
 
-**Next measured outcome:** finish already-approved H5 Manickam `wD:p2` trust/readiness verification (still no completion receipt), then *separately authorize* one small Python seat-reuse/clean-branch implementation with offline tests and **two bounded sequential pilot tasks**. No new AI agent/planning round, push or nightly schedule. H5/H3/H4 checkmarks remain as they were, and no new task execution is implied by this decision.
+**One per-project nightly local branch** `nightshift/YYYY-MM-DD` created/coordinated by the AI lead; builder commits scoped changes; independent tester runs tests/reviews; lead coordinates at most two fix/retest iterations, prepares report. **Python, later, only starts an approved run, caps time and saves logs.** No AI Seat Creator and no Python-driven multi-agent orchestration framework. **No automatic push/merge/deploy/timer.**
+
+**What's proved:** existing manual Python→Herdr H3 and offline H4 integrations remain ✅. **What's not:** H5 Manickam trust acceptance/readiness result unreported; Rohit seat shell-only last observed; no simultaneous lead+builder+tester happy-flow trial yet. **Next measurable deliverable:** one approved task completed through real lead→builder→independent tester→local night branch→report. Do not divert into additional Python seat-manager work.
 
 ## ✅ Progress scoreboard — owner review, 2026-10-19
 
