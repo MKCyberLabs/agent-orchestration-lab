@@ -1,5 +1,7 @@
 # Decision — MK Nightshift V0.5 happy-flow architecture
 
+**SUPERSEDED 2026-10-20:** The owner clarified that an **AI orchestrator**, not Python, must be the team lead: delegate coding to a Builder, send changes to an **independent Tester**, coordinate bounded fixes, create the date-based night branch, and leave merge to the owner. See [agent-led final direction](DECISION_AGENT_LED_NIGHTSHIFT_2026-10-20.md). This document remains an archive of the Argon review, **not active implementation instructions**. Python is reduced to a later optional launcher/watchdog; do not build `ensure_workspace_and_seat()` just because this older decision suggested it.
+
 **Date:** 2026-10-20 (Asia/Kolkata)  
 **Verdict:** **GO: deterministic Python + Herdr CLI, NO AI Seat Creator.** Reviewed Argon 4's completed one-time architecture assessment (its verdict: **APPROVE WITH SMALL CHANGES**). This records an architecture choice; it is **not** approval to launch agents, switch Git branches or run new coding tasks.
 
