@@ -2,7 +2,7 @@
 
 **Purpose:** A dedicated instruction file for the existing OpenClaw **development** setup. Prove one Python → Herdr → AGY-Rohit task, handle red human-attention prompts, verify tests and local Git, and **stop without endless troubleshooting**. Not a general Herdr manual.
 
-**Authorization status (updated 2026-10-19):** Reading this runbook alone never authorizes a live change. The owner has now separately authorized exactly **one corrected numeric-version override, one hot reload and conditional completion of the single previously unsent H3 prompt**. See `docs/v0.5/approvals/H3_R2_NUMERIC_VERSION_ONE_RELOAD_2026-10-19.md`. The prior refresh/reload allowance was consumed. No new trust, retry, push or timer.
+**Status update (2026-10-20):** **H3 manual PASS** (owner-reported). The corrected detector version `2026.10.19.2` loaded, exactly one AGY-Rohit prompt was sent, the transient survey hold was preserved, and host-only acceptance passed. **The earlier one-reload/one-prompt approval has been USED.** Sections describing H3 corrected recovery below are now *historical troubleshooting reference*, **NOT permission to run or repeat them**. Next: separately approve [H4 offline integration](../../prompts/V0.5_H4_INTEGRATE_PROVEN_HERDR_PATH.md). No new agent/task, push, approval automation or timer.
 
 ## 1. Exact project status — keep checkmarks
 
@@ -12,9 +12,9 @@
 | W02 isolated Chromium + PostgreSQL UAT | ✅ 26 PASS / 0 FAIL / 1 optional build NOT_RUN |
 | Herdr operator `wD:p1`, AGY-Rohit `wD:p4`, status shell `wD:p5` | ✅ H1/H2 READY |
 | Python → Herdr H3 adapter | ✅ 38 offline tests PASS, local code `ab4917a2c3368e5c80a5d92ac208be731fb1903e` |
-| H3 live agent work | ⏸ 0 prompts; fallback idle; no task acceptance/commit |
-| One upstream refresh + one override/reload | ⏸ override rejected for **nonnumeric version**, rejected file removed |
-| Latest local evidence | `28039ed9848cccf91ab0dbe56fc54e4ec2ed339b`; `docs/v0.5/evidence/H3_HERDR_DETECTOR_RECOVERY.md` |
+| H3 live agent work | ✅ Manual PASS: version `2026.10.19.2` explicit matched idle, **one** prompt, host-only tests PASS after survey hold, task SHA `0a1fce571b3b0f7d6ee8f4460ddc04c9bb5f6430` |
+| Detector recovery history | ✅ Earlier malformed nonnumeric override rejected; corrected numeric manifest then loaded once. 38 adapter + 11 detector cases PASS; lessons preserved |
+| Latest H3 local evidence | `4d0cc99c101321b335314a0c4b09f3d9873eb6c9`; `docs/v0.5/evidence/H3_HERDR_DETECTOR_RECOVERY.md` |
 
 Local commits are not independently visible in the remote instruction branch while `PUSH_HOLD` remains; these are owner-reported host facts.
 
@@ -92,7 +92,7 @@ PY
 
 The active server's `agent explain` and `server agent-manifests` after a hot reload must show the **actual loaded local override version, explicit matched rule, no warning, and no idle fallback**. Just parsing TOML or seeing `idle` is NOT success.
 
-## 5. H3 corrected happy flow — one precise controlled attempt
+## 5. Historical H3 corrected recovery sequence — COMPLETED; DO NOT RE-RUN
 
 The first owner approval was exhausted. **A NEW, separate owner approval is now recorded** for **one corrected numeric-version override + one hot reload**, and conditional completion of the *still unused* H3 AGY-Rohit prompt after a trustworthy matched safe-idle/blocked distinction is verified. Check the exact receipt above. No further retries are authorized.
 
@@ -103,6 +103,10 @@ The first owner approval was exhausted. **A NEW, separate owner approval is now 
 5. **VERIFY:** Active rule source/version and specific **matched safe idle**; no `default_known_agent_idle_fallback`, no visible trust prompt. If invalid, undo new override and restore original (a reload may be necessary solely to restore previous state); STOP `DETECTOR_NOT_VERIFIED`. No prompt.
 6. **DISPATCH AT MOST ONCE:** If confirmed ready, Python sends original previously approved H3 task to **wD:p4**. Track `prompts_sent` and do not submit a second time after stall/timeout. If new worktree trust screen appears, mark `WAITING_FOR_HUMAN`; ask the owner for **exact pane and directory**, never auto-accept. If task completes, run allowlisted diff audit and host acceptance and local Git commit. Only then mark `VERIFIED_COMMITTED` and report.
 7. **STOP:** Outcome, matched rule/fallback, live 0/1 reloads, 0/1 prompts, tests PASS/FAIL/NOT_RUN, code/evidence SHA and one concrete next owner action.
+
+## H3 final lesson: survey hold is not completion
+
+**Observed 2026-10-20:** The corrected AGY manifest accepted its numeric version and matched safe idle; Python dispatched exactly one approved prompt. A transient survey/attention hold arose. The operator did **not** respond with automatic trust/yes and did **not** re-dispatch; Python's host-only checks verified the already-produced task artifacts and a local commit. Therefore **H3 manual task result PASS** but **automatic resume of a surveyed agent is NOT proven**. Preserve the difference in `WAITING_FOR_HUMAN` and runner state. An already-verified file/test result may be reported while Herdr UI is still held, but no next task should dispatch from that ambiguous seat until reconciled.
 
 ## 6. State mapping: red flag is human attention
 
