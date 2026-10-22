@@ -1,5 +1,7 @@
 # MK Nightshift + NutriSnap: CURRENT roadmap (2026-10-22)
 
+> **21:05 IST scheduled proof update (22 Oct):** systemd timers fired correctly at 20:30 and 21:05, but both attempts safely sent **zero Codex prompts** because the interactive TUI entered transcript-selection mode. W03 did not run. The approved High effort and offline-safe readiness guard were correct on second attempt; **do not schedule a third TUI retry**. Current action: [prove official non-interactive `codex exec` as a minimally changed scheduler transport](v0.6/STOP_TUI_POLLING_HEADLESS_CODEX_DISPATCH_2026-10-22.md). No new timer has been installed. Prior V0.5 Gate C and W04 success remain intact.
+
 **Read this first; this is the current planning dashboard.** It is NOT an authorization to modify production, merge branches, install scheduling or globally switch task dispatch to CBDS. Source: owner-provided OpenClaw execution receipts and GitHub planning/source review. Unpushed OpenClaw commits cannot be independently fetched from this remote instruction branch.
 
 ## Two different version numbers
