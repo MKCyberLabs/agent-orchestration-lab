@@ -1,4 +1,6 @@
 # W04 — NutriSnap Hydration Weekly Average: complete autonomous delivery run
+
+**LATEST OWNER RECOVERY AUTHORIZATION (2026-10-22):** Initial W04 was blocked without dispatch because named AGY-Manickam had exited. **The obsolete strict no-new-pane/absent-worker STOP is superseded by [ONE-GO seat recovery + W04 instructions](V05_ONE_GO_SEAT_RECOVERY_W04_2026-10-22.md)**. It authorizes one necessary shell/pane, one verified authenticated Manickam start, W04 build and independent QA. Preserve all earlier code and reports.
 **Created:** 2026-10-22 IST · **Owner objective:** Ship a useful product fix via existing Nightshift without another analysis/approval loop.
 **Status:** PLAN READY, **NOT CODED**. **Source grounding:** GitHub `MKCyberLabs/NutriSnap` `main` inspected 2026-10-22; the actual local OpenClaw worktree remains authoritative and may differ.
 **Model guidance:** Use currently selected GPT-6-Astra for no more architecture review; switch to GPT-6.1-Sol High for coding/coordinating. Quota reported 64% remaining (owner observation), **not** a guaranteed wall-clock or token budget.
