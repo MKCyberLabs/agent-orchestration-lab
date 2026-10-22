@@ -1,4 +1,6 @@
 # START HERE — Nightshift / NutriSnap 22 Oct 2026
+
+**LATEST W04 EXECUTION UPDATE (2026-10-22):** The first W04 attempt halted without dispatch because Manickam's Herdr agent was absent; read the [ONE-GO worker recovery + W04 runbook](V05_ONE_GO_SEAT_RECOVERY_W04_2026-10-22.md) instead of stopping at the now-superseded no-new-seat rule. Original Nightshift V0.5 one-shot stays PASS.
 **LATEST UPDATE — Astra review DONE, Oct 22:** local review at `/home/openclaw/worktrees/agent-orch-v05-p0/docs/v0.5/OCT22_VERIFIED_STATUS_AND_DECISIONS.md` (owner-reported commit `eb9b57a5205ba11a2d83dc791b930460d796123`) confirmed V0.5 one-shot DONE with `REVIEW_REQUIRED`. No second architecture review. **Next is the [W04 complete autonomous hydration run plan](W04_HYDRATION_COMPLETE_RUN_PLAN_2026-10-22.md)**, executed with GPT-6.1-Sol High, followed by one QA report. No push/merge/scheduling.
 
 ## Build a doghouse lamp, not a moon generator
