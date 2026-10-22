@@ -1,5 +1,8 @@
 # MK Nightshift — phased roadmap
 
+> **CURRENT STATUS — 2026-10-22:** Nightshift V0.5 **ONE-SHOT LIVE PASS (owner-reported Gate C)**. Launcher repair `45d7e8285617d1c231417d2ed643d7581d740911` and AGY-Manickam NutriSnap implementation `9934c6261c728c5a0dba9954b781a8b03fe29c12` passed independent Codex QA (107 finance, 74 reminders, 13 focused, 7 browser checks). Local unmerged commits and `PUSH_HOLD` remain; no recurring scheduling. **[START HERE: current mind map, doghouse-light scope test, model choice and open questions](START_HERE_2026-10-22_DOGHOUSE_LIGHT.md)**. Older pending Gate C / H1–H5 text below is historic and **must not be treated as the current action plan**. Verify final host wrapper exit read-only; no repeat live pilot.
+
+
 Planning baseline: 2026-10-19. **Updated 2026-10-20: NS-01 + NS-02 real AGY/Codex QA PASS (owner-reported); Gate B minimal launcher 22 OFFLINE tests PASS (owner-reported); Gate C extended live launcher + NutriSnap Bills & Reminders mission NEXT, not yet executed.** H1–H5 historical checks remain closed; no more Python/Herdr architecture expansion.
 
 ## CURRENT direction — owner-corrected, agent-led Nightshift (2026-10-20)
