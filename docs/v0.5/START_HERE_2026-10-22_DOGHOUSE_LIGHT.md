@@ -1,4 +1,6 @@
 # START HERE — Nightshift / NutriSnap 22 Oct 2026
+**LATEST UPDATE — Astra review DONE, Oct 22:** local review at `/home/openclaw/worktrees/agent-orch-v05-p0/docs/v0.5/OCT22_VERIFIED_STATUS_AND_DECISIONS.md` (owner-reported commit `eb9b57a5205ba11a2d83dc791b930460d796123`) confirmed V0.5 one-shot DONE with `REVIEW_REQUIRED`. No second architecture review. **Next is the [W04 complete autonomous hydration run plan](W04_HYDRATION_COMPLETE_RUN_PLAN_2026-10-22.md)**, executed with GPT-6.1-Sol High, followed by one QA report. No push/merge/scheduling.
+
 ## Build a doghouse lamp, not a moon generator
 
 **Purpose:** A short, evidence-led reset before spending more Codex quota. The doghouse lamp is a **metaphor**, NOT a pet-hardware requirement. If the need is "a dog needs light in its shelter," deliver a switch, suitable light and safe power—not a moon generator, a power company and twelve teams. Apply exactly that simplicity test to Nightshift: owner task → builder commit → independent QA → owner report.
