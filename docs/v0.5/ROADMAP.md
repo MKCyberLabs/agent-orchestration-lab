@@ -1,5 +1,8 @@
 # MK Nightshift — phased roadmap
 
+> **2026-10-22 W04 execution update:** first W04 request **BLOCKED before any prompt or code change** because only Codex `wE:p1` was live; old Manickam agent names and pane mappings were stale. This does NOT reverse the previously proven V0.5 one-shot Gate C PASS. The **current owner-authorized next execution** is [ONE-GO Herdr worker recovery + W04 implementation + independent QA](V05_ONE_GO_SEAT_RECOVERY_W04_2026-10-22.md). No further H-gates or rearchitecture. W04 NOT YET PASS.
+
+
 > **CURRENT STATUS — 2026-10-22:** Nightshift V0.5 **ONE-SHOT LIVE PASS (owner-reported Gate C)**. Launcher repair `45d7e8285617d1c231417d2ed643d7581d740911` and AGY-Manickam NutriSnap implementation `9934c6261c728c5a0dba9954b781a8b03fe29c12` passed independent Codex QA (107 finance, 74 reminders, 13 focused, 7 browser checks). Local unmerged commits and `PUSH_HOLD` remain; no recurring scheduling. **[START HERE: current mind map, doghouse-light scope test, model choice and open questions](START_HERE_2026-10-22_DOGHOUSE_LIGHT.md)**. Older pending Gate C / H1–H5 text below is historic and **must not be treated as the current action plan**. Verify final host wrapper exit read-only; no repeat live pilot.
 
 
