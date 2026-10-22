@@ -1,6 +1,9 @@
 # MK Nightshift + NutriSnap: CURRENT roadmap (2026-10-22)
 
-> **21:05 IST scheduled proof update (22 Oct):** systemd timers fired correctly at 20:30 and 21:05, but both attempts safely sent **zero Codex prompts** because the interactive TUI entered transcript-selection mode. W03 did not run. The approved High effort and offline-safe readiness guard were correct on second attempt; **do not schedule a third TUI retry**. Current action: [prove official non-interactive `codex exec` as a minimally changed scheduler transport](v0.6/STOP_TUI_POLLING_HEADLESS_CODEX_DISPATCH_2026-10-22.md). No new timer has been installed. Prior V0.5 Gate C and W04 success remain intact.
+> **LATEST — 21:50 IST headless scheduled proof (owner-reported): `SCHEDULED_HEADLESS_END_TO_END_PASS`.** On 22 Oct 2026, systemd timer fired at **21:50:00 IST**, exactly **one** authenticated headless Codex read-only task ran, finished **21:51:11 IST** with **exit 0**, and its fresh matching launcher report/receipt was validated. Outcome **`DISCOVERY_COMPLETE`** (W03 discovery only; **W03 coding NOT STARTED**). Zero manual runs/retries. See host-only evidence at `/home/openclaw/.local/state/mk-nightshift/scheduled/2026-10-22-2150-ist/scheduler-final-status.json` and `W03_HEADLESS_SCHEDULE_PROOF_20261022T2150IST/receipt.json`. Headless transport local code `0a287c691a8dcd80f5b577bfa8db159ba0948bcf`, previously 84 regression tests + systemd/shell probes PASS. **Close scheduler-triggering/read-only headless milestone now; do not repeat prior TUI composer gates.** Next: obtain actual W03 discovery details from the host report, scope an isolated W03 implementation, and **separately** demonstrate scheduled *write-capable* Codex→Manickam implementation/independent QA before considering recurring nights. Existing `PUSH_HOLD`; no daily timer, push, merge or deployment authorized.
+
+
+> **HISTORICAL FAILURE — 21:05 IST (superseded by 21:50 PASS):** systemd timers fired correctly at 20:30 and 21:05, but both attempts safely sent **zero Codex prompts** because the interactive TUI entered transcript-selection mode. W03 did not run. The approved High effort and offline-safe readiness guard were correct on second attempt; **do not schedule a third TUI retry**. Current action: [prove official non-interactive `codex exec` as a minimally changed scheduler transport](v0.6/STOP_TUI_POLLING_HEADLESS_CODEX_DISPATCH_2026-10-22.md). No new timer has been installed. Prior V0.5 Gate C and W04 success remain intact.
 
 **Read this first; this is the current planning dashboard.** It is NOT an authorization to modify production, merge branches, install scheduling or globally switch task dispatch to CBDS. Source: owner-provided OpenClaw execution receipts and GitHub planning/source review. Unpushed OpenClaw commits cannot be independently fetched from this remote instruction branch.
 
@@ -8,6 +11,19 @@
 
 1. **MK Nightshift V0.5** = the multi-agent one-shot development mechanism. **Proven PASS** in the user-reported Gate C run. Not yet an unattended recurring nightly service.
 2. **NutriSnap V0.5** = a separate **future product release** (career/income, skills, assets) in `MKCyberLabs/NutriSnap/docs/roadmap/VERSION_TRACKER.md` (dated Oct 12, status PLANNED). **Do not claim that NutriSnap product V0.5 was implemented just because Nightshift V0.5 passed.** Existing remote product tracker can lag local feature branches.
+
+## Current scheduler proof — completed vs remaining
+
+| Capability | Verified status |
+|---|---|
+| systemd fires at requested time | **PASS** (20:30, 21:05, 21:50 IST trials) |
+| authenticated Codex headless execution from calendar | **PASS** — 21:50 IST |
+| exactly one read-only task + run-specific completion report | **PASS**, `DISCOVERY_COMPLETE` |
+| unattended NutriSnap code edits via Codex→AGY-Manickam | **NOT YET PROVEN** |
+| periodic nightly scheduling | **NOT INSTALLED / NOT AUTHORIZED** |
+| code promotion to main/production | **HOLD** — owner review + `PUSH_HOLD` |
+
+**Next action:** Review the host-only W03 discovery outcome. Determine concrete date/time defect and acceptance criteria; then plan **one** isolated scheduled AGY coding + independent QA run with fresh run ID and zero auto-merge. Do not schedule additional read-only proof-of-timer runs.
 
 ## Verified/reported accomplishments — do not repeat
 
