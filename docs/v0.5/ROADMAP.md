@@ -1,5 +1,8 @@
 # MK Nightshift — phased roadmap
 
+> **2026-10-22 latest:** **W04_PASS + REPEAT_RUN_RECOVERY_PASS** (owner-reported): NutriSnap local code `8a13c3c77250b829292fd47f28365b34cda6425e`, 40 test executions + 6/6 browser checks, builder reattached in `wE:p2`, one repair, original checkout intact; local W04 evidence docs commit `b9a4051`. V0.5 one-shot remains PASS; branch unmerged under `PUSH_HOLD`. **Next optional efficiency experiment:** [one CBDS→AGY durable handoff comparison](../v0.6/CBDS_ONE_GO_EFFICIENCY_TRIAL_2026-10-22.md), not a V0.5 rerun or authorization for global CBDS adoption. Prior blocked W04 entries below are historical.
+
+
 > **2026-10-22 W04 execution update:** first W04 request **BLOCKED before any prompt or code change** because only Codex `wE:p1` was live; old Manickam agent names and pane mappings were stale. This does NOT reverse the previously proven V0.5 one-shot Gate C PASS. The **current owner-authorized next execution** is [ONE-GO Herdr worker recovery + W04 implementation + independent QA](V05_ONE_GO_SEAT_RECOVERY_W04_2026-10-22.md). No further H-gates or rearchitecture. W04 NOT YET PASS.
 
 
